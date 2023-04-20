@@ -1,11 +1,20 @@
 import pandas as pd
 import numpy as np
+import lightgbm as lgb
+import optuna
 
 from sklearn.model_selection import StratifiedKFold
 from functools import reduce
 from typing import Union, Any
+
+
 from sklearn.metrics import roc_auc_score
 from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import mutual_info_classif
+from sklearn.dummy import DummyClassifier
+from catboost import CatBoostClassifier, metrics
 
 
 # Categorical features process
@@ -94,7 +103,12 @@ class SearchHyperParams:
         self.cross_val = 5
 
 
-    def objective_lr(self, trial: Any, var_train, var_test) -> tuple:
+    def objective_lr(
+                    self,
+                    trial: Any,
+                    var_train: Union[list, pd.Series, pd.DataFrame],
+                    var_test: Union[list, pd.Series, pd.DataFrame]
+                    ) -> tuple:
         param_grid = {
             "tol": trial.suggest_loguniform("tol", 0.000001, 1.0),
             "max_iter": trial.suggest_int("max_iter", 10, 200),
@@ -133,7 +147,12 @@ class SearchHyperParams:
         return np.mean(cv_scores), np.mean(cv_scores_train)
 
 
-    def objective_decision_tree(self, trial: Any, var_train, var_test):
+    def objective_decision_tree(
+                                self,
+                                trial: Any,
+                                var_train: Union[list, pd.Series, pd.DataFrame],
+                                var_test: Union[list, pd.Series, pd.DataFrame]
+                                ) -> tuple:
         """
         Função de estudo do optuna adaptada para Árvore de Decisão.
         Paramêtros
@@ -158,15 +177,15 @@ class SearchHyperParams:
             
         }
 
-        cv = StratifiedKFold(n_splits=cvs, shuffle=True, random_state=42)
+        cv = StratifiedKFold(n_splits=self.cross_val, shuffle=True, random_state=42)
 
-        cv_scores = np.empty(cvs)
-        cv_scores_train = np.empty(cvs)
-        for idx, (train_idx, test_idx) in enumerate(cv.split(X, y)):
-            X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
-            y_train, y_test = y[train_idx], y[test_idx]
+        cv_scores = np.empty(self.cross_val)
+        cv_scores_train = np.empty(self.cross_val)
+        for idx, (train_idx, test_idx) in enumerate(cv.split(var_train, var_test)):
+            X_train, X_test = var_train.iloc[train_idx], var_train.iloc[test_idx]
+            y_train, y_test = var_test[train_idx], var_test[test_idx]
 
-            model = tree.DecisionTreeClassifier(
+            model = DecisionTreeClassifier(
                 **param_grid
             )
 
@@ -181,7 +200,47 @@ class SearchHyperParams:
             
         return np.mean(cv_scores), np.mean(cv_scores_train)
         
-        
+    def objective_cat(
+                    self,
+                    trial: Any,
+                    var_train: Union[list, pd.Series, pd.DataFrame],
+                    var_test: Union[list, pd.Series, pd.DataFrame]
+                    ) -> tuple:
+        """
+        Função para estudo Optuna do modelo de CatBoost
+        """
+        param_grid = {
+            "n_estimators": trial.suggest_int("n_estimators", 5,50),
+            "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2),
+            "max_depth": trial.suggest_categorical("max_depth", [2,3,5]),
+            "reg_lambda": trial.suggest_float("reg_lambda", 0, 1),
+            "colsample_bylevel": trial.suggest_float("colsample_bylevel",  0.05, 1)
+        }
+
+        cv = StratifiedKFold(n_splits=self.cross_val, shuffle=True, random_state=42)
+
+        cv_scores = np.empty(self.cross_val)
+        cv_scores_train = np.empty(self.cross_val)
+        for idx, (train_idx, test_idx) in enumerate(cv.split(var_train, var_test)):
+            X_train, X_test = var_train.iloc[train_idx], var_train.iloc[test_idx]
+            y_train, y_test = var_test[train_idx], var_test[test_idx]
+            model = CatBoostClassifier(custom_loss=[metrics.AUC()],
+                        **param_grid)
+            model.fit(
+                X_train,
+                y_train,
+                eval_set=[(X_test, y_test)],
+                early_stopping_rounds=100,
+                verbose_eval=False
+            )
+            preds = model.predict_proba(X_test)
+            try:
+                cv_scores[idx] = roc_auc_score(y_test, preds[:,1])
+                cv_scores_train[idx] = roc_auc_score(y_train,model.predict_proba(X_train)[:,1]) - cv_scores[idx]
+            except:
+                cv_scores[idx] = -1
+                cv_scores_train[idx] = 1
+        return np.mean(cv_scores), np.mean(cv_scores_train)
 
 
 if __name__ == '__main__':
