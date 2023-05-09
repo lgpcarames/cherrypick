@@ -1,3 +1,10 @@
+__author__ = "Lucas Carames"
+__license__="MIT"
+__version__='0.1.0'
+__maintainer__='Lucas Carames'
+__email__='lgpcarames@gmail.com'
+
+
 import pandas as pd
 import numpy as np
 import lightgbm as lgb
@@ -9,12 +16,15 @@ from functools import reduce
 from typing import Union, Any
 
 
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, roc_curve, confusion_matrix
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.dummy import DummyClassifier
+from sklearn.preprocessing import MinMaxScaler
+
+from sklearn.cluster import KMeans
 
 import shap
 
@@ -241,6 +251,22 @@ class SearchHyperParams:
         return np.mean(cv_scores), np.mean(cv_scores_train)
 
 class CherryPick:
+
+    def __set_variables__(self, var, baseline):
+        # Input data
+        temp_var = var
+        if baseline:
+            temp_var = np.append(temp_var, 'random_variable')
+            
+        if isinstance(temp_var, list) or isinstance(temp_var, np.ndarray):
+            temp_var = [x.replace(' ', '_') for x in temp_var]
+        elif isinstance(temp_var, str):
+            temp_var = temp_var.replace(' ', '_')
+        else:
+            raise TypeError('please, check the type of variable, the variable must be either str or list type')
+        return temp_var
+        
+
     def __init__(
                 self,
                 data,
@@ -252,21 +278,23 @@ class CherryPick:
                 log_lr_study=False,
                 log_lgb_study=False,
                 log_tree_study=False,
-                verbosity = False
+                verbosity = False,
+                baseline = True
                 ):
-        # Input data
-        if isinstance(variables, list) or isinstance(variables, np.ndarray):
-            self.variables = [x.replace(' ', '_') for x in variables]
-        elif isinstance(variables, str):
-            self.variables = variables.replace(' ', '_')
-        else:
-            raise TypeError('please, check the type of variable, the variable must be either str or list type')
-        
+
+        self.variables = self.__set_variables__(var=variables, baseline=baseline)
+
         if isinstance(target, str):
             self.target = target.replace(' ', '_')
         else:
             raise TypeError('please, check the type of variable, the variable must be list type')
+        
         self.data = data
+        # inserindo a coluna com variável aleatória para comparação
+        if not 'random_variable' in self.data.columns.tolist():
+            self.data['random_variable'] = [np.random.random() for _ in self.data.index]
+
+
         self.study_cross_val = study_cross_val
         self.num_studies = num_studies
         self.overfit_thres = overfit_thres
@@ -541,7 +569,7 @@ class CherryPick:
 
         for variavel in tqdm(self.variables):
             dic_['variavel'].append(variavel)
-            dic_[metrica].append(self.logistic_roc(self.data, self.variables, self.target))
+            dic_[metrica].append(self.logistic_roc(self.data, variavel, self.target))
 
         print(f'\n--- FINALIZADA A ESCORAGEM VIA ROC LOGISTICA PARA O ALVO {self.target}---\n ')
         return pd.DataFrame(dic_).sort_values(by=metrica, ascending=False)
@@ -591,13 +619,17 @@ class CherryPick:
                                 tree_gain = True,
                                 lgbm_gain = True,
                                 lgbm_split = True,
-                                cache: bool=True) -> pd.DataFrame:
+                                cache: bool=True
+                                ) -> pd.DataFrame:
         """
         Gera uma tabela compilando os resultados da roc logística, roc catboost,
         ganho de entropia catboost, e informação mútua
         """
+
+
         if cache and len(self.data_most_important):
-            return self.data_most_important
+           return self.data_most_important 
+        
 
         else:
             temp_ = []
@@ -661,6 +693,61 @@ class CherryPick:
             except:
                 print('Alguma coisa deu errado!')
             return self.data_most_important
+
+
+
+    def __standard_score__(self, df, metrics_column):
+        df_ = df.sort_values(by=metrics_column[0], ascending=False)
+        df_['standard_score'] = [x for x in range(len(df)-1, -1, -1)]
+        
+        for metric in metrics_column[1:]:
+            df_ = df_.sort_values(by=metric, ascending=False)
+            df_['temp_score'] = [x for x in range(len(df)-1, -1, -1)]
+
+            df_['standard_score'] = df_[['standard_score', 'temp_score']].sum(axis=1)
+
+            df_ = df_.drop(columns='temp_score')
+
+        return df_.sort_values(by='standard_score', ascending=False)
+    
+    def __cluster_score__(
+                            self,
+                            df,
+                            metrics_column,
+                            n_cluster=8,
+                            init='k-means++',
+                            n_init=10,
+                            tol=1e-4,
+                            verbose=0,
+                            random_state=13,
+                            algorithm='lloyd'
+                            ):
+        df_ = df.sort_values(by=metrics_column[0], ascending=False)
+
+        df_scaled = df_.copy()
+
+        for col in metrics_column[1:]:
+            scaler = MinMaxScaler()
+
+            df_scaled[col] = scaler.fit_transform(df_[[col]])
+
+        cluster = KMeans(n_clusters=n_cluster,
+                        init=init,
+                        n_init=n_init,
+                        tol=tol,
+                        verbose=verbose,
+                        random_state=random_state,
+                        algorithm=algorithm
+                        )
+        cluster.fit(df_scaled[metrics_column[1:]])
+
+        df_['clusters'] = cluster.predict(df_scaled[metrics_column[1:]])
+        df_['cluster_score'] = df_scaled[metrics_column[1:]].mean(axis=1)
+        
+        return df_.sort_values(by='cluster_score', ascending=False)
+
+
+
         
     def calculate_score(self, df: pd.DataFrame, metrics_column: list, strategy='standard'):
         """
@@ -669,20 +756,178 @@ class CherryPick:
         """
 
         if strategy == 'standard':
-            df_ = df.sort_values(by=metrics_column[0], ascending=False)
-            df_['score'] = [x for x in range(len(df)-1, -1, -1)]
-            
-            for metric in metrics_column[1:]:
-                df_ = df_.sort_values(by=metric, ascending=False)
-                df_['temp_score'] = [x for x in range(len(df)-1, -1, -1)]
 
-                df_['score'] = df_[['score', 'temp_score']].sum(axis=1)
-
-                df_ = df_.drop(columns='temp_score')
-
-            return df_.sort_values(by='score', ascending=False)
+            return self.__standard_score__(df=df, metrics_column=metrics_column)
+        
+        elif strategy == 'cluster_score':
+            return self.__cluster_score__(df=df, metrics_column=metrics_column)
+        
 
 
+
+def limiar_score(predictions,df_target):
+    #Imprimindo limiar de Escore
+    fpr, tpr, threshold = roc_curve(df_target, predictions)
+    i = np.arange(len(tpr)) 
+    roc = pd.DataFrame({'tf' : pd.Series(tpr-(1-fpr), index=i), 'threshold' : pd.Series(threshold, index=i)})
+    roc_t = roc.loc[(roc.tf-0).abs().argsort()[:1]]
+    # print('Limiar que maxima especificidade e sensitividade:')
+    # print(list(roc_t['threshold']))
+    #analisando modelo com novo limiar
+    tn, fp, fn, tp = confusion_matrix(df_target, [1 if item>=list(roc_t['threshold'])[0] else 0 for item in predictions]).ravel()
+    Precision = tp/(tp+fp)
+    Recall = tp/(tp+fn)
+    acuracia = (tp+tn)/(tn+fp+fn+tp)
+    F = (2*Precision*Recall)/(Precision+Recall)
+    # print('Precision',Precision)
+    # print('Recall',Recall)
+    # print('Acuracia',acuracia)
+    # print('F-Score',F)
+    # print('Roc-AUC', roc_auc_score(df_target, predictions))
+    return {'precision': Precision,
+            'recall': Recall,
+            'acuracia': acuracia,
+            'f-score': F,
+            'roc-auc': roc_auc_score(df_target, predictions),
+            'threshold': float(roc_t['threshold'])
+            }
+
+def __get_features_threshold_score__(df, variables, target):
+    temp = df[[target]]
+
+    array_thres = []
+    for variable in variables:
+        scale = MinMaxScaler()
+        temp[variable] = scale.fit_transform(df[[variable]])
+        temp[variable] = temp[variable].fillna(-1)
+
+        limiar_temp = limiar_score(temp[variable], temp[target])
+        limiar_temp.update({'variable': variable})
+        limiar_temp.update({'threshold_variable': scale.inverse_transform([[limiar_temp['threshold']]])[0][0]})
+
+        array_thres.append(pd.DataFrame(limiar_temp, index=[0]))
+
+    return pd.concat(array_thres, axis=0)
+
+def __best_threshold_classification__(df, variables, target):
+    temp_ = __get_features_threshold_score__(df, variables, target)
+
+    df_temp = df.copy()
+
+    for variable in variables:
+        temp_thres = temp_[temp_['variable']==variable]['threshold_variable'][0]
+        # print(temp_thres, type(temp_thres))
+
+        # Verificando como o limiar deve ser aplicado de maneira a maximizar a roc-auc
+        ## 1 se x>=temp_thres
+        temp_list_geq_thres = df_temp[variable].apply(lambda x: 1 if x>=temp_thres else 0)
+
+        score_geq_thres = roc_auc_score(df_temp[target], temp_list_geq_thres)
+
+        ## 1 se x<=temp_thres
+        temp_list_leq_thres = df_temp[variable].apply(lambda x: 1 if x<=temp_thres else 0)
+
+        score_leq_thres = roc_auc_score(df_temp[target], temp_list_leq_thres)
+
+        if score_geq_thres>=score_leq_thres:
+            df_temp[variable] = temp_list_geq_thres
+
+        else:
+            df_temp[variable] = temp_list_leq_thres
+
+    return df_temp
+
+
+
+def __set_difficulty_group__(df, target):
+    sucess_list = []
+    for ind in df.index:
+        rate_0 = df.drop(columns=target).T[ind].value_counts()[0]/df.drop(columns=target).T.shape[0]
+        rate_1 = df.drop(columns=target).T[ind].value_counts()[1]/df.drop(columns=target).T.shape[0]
+
+        if df[target].iloc[ind]==0:
+            sucess_list.append(rate_0)
+
+        elif df[target].iloc[ind]==1:
+            sucess_list.append(rate_1)
+
+        else:
+            raise Exception('data target must be binary class.')
+
+    df['sucess_rate'] = sucess_list
+
+    difficulty_threshold = df['sucess_rate'].mean()
+
+    # We set the group 0 as the group with the more difficult lines to classifier
+    # as follows, the group 1 regards to the group with easiest lines
+    df['difficulty_group'] = df['sucess_rate'].apply(lambda x: 0 if x <= difficulty_threshold else 1)
+    
+
+    return df
+
+
+def __generate_stats_sucess__(df, variables, target):
+    df_ = pd.DataFrame({'variable': [], 'sucess_rate_g0': [], 'sucess_rate_g1': []})
+
+
+
+    for var in variables:    
+    
+        check_list = pd.DataFrame({'rightClassification': [], 'difficulty_group': []})
+        for ind in df.index:
+
+            if df[target].iloc[ind]==df[var].iloc[ind]:
+                check_list.loc[len(check_list)] = {'rightClassification': 1, 'difficulty_group': df.iloc[ind]['difficulty_group']}
+            elif df[target].iloc[ind]==1:
+                check_list.loc[len(check_list)] = {'rightClassification': 0, 'difficulty_group': df.iloc[ind]['difficulty_group']}
+
+            else:
+                check_list.loc[len(check_list)] = {'rightClassification': np.nan, 'difficulty_group': df.iloc[ind]['difficulty_group']}
+
+        sucess_rate_g0 = check_list.loc[check_list['difficulty_group']==0, 'rightClassification'].sort_values().value_counts()[1]/check_list[check_list['difficulty_group']==0].shape[0]
+        sucess_rate_g1 = check_list.loc[check_list['difficulty_group']==1, 'rightClassification'].sort_values().value_counts()[1]/check_list[check_list['difficulty_group']==1].shape[0]
+
+        df_.loc[len(df_)] = {'variable': var, 'sucess_rate_g0': sucess_rate_g0, 'sucess_rate_g1': sucess_rate_g1}
+
+
+
+    df_['g0_quantile'] = df_['sucess_rate_g0'].apply(lambda x: 'Q1' if x<=df_['sucess_rate_g0'].quantile(0.33) else ('Q2' if x<=df_['sucess_rate_g0'].quantile(0.66) else 'Q3'))
+
+    df_['g1_quantile'] = df_['sucess_rate_g1'].apply(lambda x: 'Q1' if x<=df_['sucess_rate_g1'].quantile(0.33) else ('Q2' if x<=df_['sucess_rate_g1'].quantile(0.66) else 'Q3'))
+
+    df_['g0_quantile_score'] = df_['g0_quantile'].apply(lambda x: 1.0 if x=='Q3' else (0.5 if x=='Q2' else 0.25))
+
+    df_['g1_quantile_score'] = df_['g1_quantile'].apply(lambda x: 1.0 if x=='Q3' else (0.3 if x=='Q2' else 0.1))
+
+
+    # df_ = df_.assign(quantile_score=lambda x: x['g0_quantile_score']*x['g1_quantile_score'])
+
+    df_ = df_.assign(cherry_score = lambda x: (x['g0_quantile_score']*x['sucess_rate_g0']+x['g1_quantile_score']*x['sucess_rate_g1'])/2)
+
+
+    return df_.sort_values(by='cherry_score', ascending=False)
+
+
+def generate_cherry_score(df, variables, target):
+    classfied_df = __best_threshold_classification__(df=df, variables=variables, target=target)
+
+    # creating a column with difficulty group
+    df_difficulty = __set_difficulty_group__(df=classfied_df, target=target)
+
+    df_score = __generate_stats_sucess__(df=df_difficulty, variables=variables, target=target)
+
+    return df_score
+    # return df_score[['variable', 'cherry_score']]
+      
+
+
+# df_
+
+
+
+
+
+    
 
 
 if __name__ == '__main__':
