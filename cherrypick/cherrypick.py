@@ -765,34 +765,73 @@ class CherryPick:
 
 
 
-def limiar_score(predictions,df_target):
+def limiar_score(predictions: Union[list, np.ndarray], target: Union[list, np.ndarray]) -> dict:
+    """
+    Dada uma entrada de previsão probabilística, e uma lista com a variável alvo real,
+    obtém o limiar ótimo de classificação.
+
+    Parâmetros:
+    ----------
+    predictions: Union[list, np.ndarray]
+    Iterável com probabilidades de previsão da variável alvo.
+
+    target: Union[list, np.ndarray]
+    Iterável com as informações reais da variável alvo.
+
+    Retorna:
+    -------
+    limiar_score: dict
+    Dicionário com informação do limiar ótimo e de algumas de suas métricas de classificação
+    como precisão, recall, acurácia, roc-auc e f1-score.
+
+    Developed by: Vinícius Ormenesse - https://github.com/ormenesse
+    """
     #Imprimindo limiar de Escore
-    fpr, tpr, threshold = roc_curve(df_target, predictions)
+    fpr, tpr, threshold = roc_curve(target, predictions)
     i = np.arange(len(tpr)) 
     roc = pd.DataFrame({'tf' : pd.Series(tpr-(1-fpr), index=i), 'threshold' : pd.Series(threshold, index=i)})
     roc_t = roc.loc[(roc.tf-0).abs().argsort()[:1]]
     # print('Limiar que maxima especificidade e sensitividade:')
     # print(list(roc_t['threshold']))
     #analisando modelo com novo limiar
-    tn, fp, fn, tp = confusion_matrix(df_target, [1 if item>=list(roc_t['threshold'])[0] else 0 for item in predictions]).ravel()
+    tn, fp, fn, tp = confusion_matrix(target, [1 if item>=list(roc_t['threshold'])[0] else 0 for item in predictions]).ravel()
     Precision = tp/(tp+fp)
     Recall = tp/(tp+fn)
     acuracia = (tp+tn)/(tn+fp+fn+tp)
     F = (2*Precision*Recall)/(Precision+Recall)
-    # print('Precision',Precision)
-    # print('Recall',Recall)
-    # print('Acuracia',acuracia)
-    # print('F-Score',F)
-    # print('Roc-AUC', roc_auc_score(df_target, predictions))
     return {'precision': Precision,
             'recall': Recall,
             'acuracia': acuracia,
             'f-score': F,
-            'roc-auc': roc_auc_score(df_target, predictions),
+            'roc-auc': roc_auc_score(target, predictions),
             'threshold': float(roc_t['threshold'])
             }
 
-def __get_features_threshold_score__(df, variables, target):
+def __get_features_threshold_score__(df: pd.DataFrame, variables: Union[list, np.ndarray], target: str) -> pd.DataFrame:
+    """
+    Obtém o limiar ótimo de classificação de cada variável especificada.
+
+    Parâmetros:
+    ----------
+    df: pd.DataFrame
+    base de dados que contém os dados referentes à variável explicativa e a variável alvo.
+
+    variables: Union[list, np.ndarray]
+    lista com o nome das variáveis explicativas que se deseja obter o limiar de classificação ótimo.
+
+    target: Union[list, np.ndarray]
+    nome da variável alvo
+
+    Retorna:
+    -------
+    __get_features_threshold_score__: pd.DataFrame
+    Dataframe contendo para cada variável explicativa o seu limiar normalizada e não-normalizado.
+    O limiar especifica a partir de qual valor, podemos delimitar as classes da variável alvo de 
+    maneira a otimizar a especificidade e sensitividade.
+
+
+    
+    """
     temp = df[[target]]
 
     array_thres = []
@@ -809,7 +848,31 @@ def __get_features_threshold_score__(df, variables, target):
 
     return pd.concat(array_thres, axis=0)
 
-def __best_threshold_classification__(df, variables, target):
+def __best_threshold_classification__(df: pd.DataFrame, variables: Union[list, np.ndarray], target: str) -> pd.DataFrame:
+    """
+    Realiza uma previsão da variável alvo a partir de cada uma de suas variáveis explicativas,
+    a classificação é realizada de maneira separada entre as variáveis explicativas, utilizando
+    apenas os seus respectivos valores de limiar ótimo. A ordem de classificação a partir do 
+    limiar é definida de acordo com a ordem que oferece a classificação de maior roc.
+
+    Parâmetros:
+    ----------
+    df: pd.DataFrame
+    base de dados que contém os dados referentes à variável explicativa e a variável alvo.
+
+    variables: Union[list, np.ndarray]
+    lista com o nome das variáveis explicativas
+
+    Retorna:
+    -------
+    __best_threshold_classification__: pd.DataFrame
+    Um dataframe cuja cada coluna apresenta a classificação do mesmo a partir do seu limiar
+    ótimo.
+
+    target: Union[list, np.ndarray]
+    nome da variável alvo
+
+    """
     temp_ = __get_features_threshold_score__(df, variables, target)
 
     df_temp = df.copy()
@@ -839,7 +902,16 @@ def __best_threshold_classification__(df, variables, target):
 
 
 
-def __set_difficulty_group__(df, target):
+def __set_difficulty_group__(df: pd.DataFrame, target: str) -> pd.DataFrame:
+    """
+    Define os grupos de dificuldade de classificação das linhas a partir da taxa
+    de acerto das variáveis explicativas.
+    As linhas cuja taxa de acerto supere a média, serão postas na classe de linhas
+    fáceis de serem classificadas. Por outro lado, linhas com taxa de acerto inferior
+    à média, serão rediracionadas ao grupo das linhas mais difíceis de serem 
+    classificadas.
+
+    """
     sucess_list = []
     for ind in df.index:
         rate_0 = df.drop(columns=target).T[ind].value_counts()[0]/df.drop(columns=target).T.shape[0]
@@ -858,15 +930,56 @@ def __set_difficulty_group__(df, target):
 
     difficulty_threshold = df['sucess_rate'].mean()
 
-    # We set the group 0 as the group with the more difficult lines to classifier
-    # as follows, the group 1 regards to the group with easiest lines
-    df['difficulty_group'] = df['sucess_rate'].apply(lambda x: 0 if x <= difficulty_threshold else 1)
+    # We set the group 1 as the group with the more difficult lines to classifier
+    # as follows, the group 0 regards to the group with easiest lines
+    df['difficulty_group'] = df['sucess_rate'].apply(lambda x: 0 if x >= difficulty_threshold else 1)
     
 
     return df
 
 
-def __generate_stats_sucess__(df, variables, target):
+def __generate_stats_sucess__(
+                             df: pd.DataFrame,
+                             variables: Union[list, np.ndarray],
+                             target: str,
+                             g0_weight=[0.1, 0.3, 1.0],
+                             g1_weight=[0.25, 0.5, 1.0]
+                             ) -> pd.DataFrame:
+    
+    """
+    Gera o cherry score juntamente com as estatísticas utilizadas para o cálculo do mesmo.
+    Dentre as estatísticas estão a faixa da taxa de acerto de cada variável entre os grupos
+    de maior e menor dificuldade de classificação, quartil da variável em relação aos grupos,
+    e o cherry score.
+
+    Parâmetros:
+    ----------
+    df: pd.DataFrame
+    base de dados com as variáveis que se deseja obter o cherry score
+
+    variables: Union[list, np.ndarray]
+    iterável com as variáveis que se deseja calcular o cherry score
+
+    target:
+    variável alvo
+
+    g0_weight: list
+    Peso dado de acordo com a taxa de acerto de uma variável no grupo das linhas mais fáceis.
+    O peso é associado ao quartil que a variável assume no grupo. Quanto menor o quartil, menos
+    acertos a variável teve no grupo, portanto, menor será o peso.
+
+    g1_weight: list
+    Peso dado de acordo com a taxa de acerto de uma variável no grupo das linhas mais difíceis.
+    O peso é associado ao quartil que a variável assume no grupo. Quanto menor o quartil, menos
+    acertos a variável teve no grupo, portanto, menor será o peso.
+
+    Retorna:
+    __generate_stats_sucess__: pd.DataFrame
+    Dataframe com cherry score, juntamente com as métricas estatísticas utilizadas para o seu cálculo.
+    -------
+
+
+    """
     df_ = pd.DataFrame({'variable': [], 'sucess_rate_g0': [], 'sucess_rate_g1': []})
 
 
@@ -891,16 +1004,42 @@ def __generate_stats_sucess__(df, variables, target):
 
 
 
-    df_['g0_quantile'] = df_['sucess_rate_g0'].apply(lambda x: 'Q1' if x<=df_['sucess_rate_g0'].quantile(0.33) else ('Q2' if x<=df_['sucess_rate_g0'].quantile(0.66) else 'Q3'))
+    df_['g0_quantile'] = df_['sucess_rate_g0'].apply(
+                                                    lambda x:
+                                                    'Q1' if x<=df_['sucess_rate_g0'].quantile(0.33)
+                                                    else
+                                                    (
+                                                    'Q2' if x<=df_['sucess_rate_g0'].quantile(0.66)
+                                                    else 'Q3'
+                                                    )
+                                                )
 
-    df_['g1_quantile'] = df_['sucess_rate_g1'].apply(lambda x: 'Q1' if x<=df_['sucess_rate_g1'].quantile(0.33) else ('Q2' if x<=df_['sucess_rate_g1'].quantile(0.66) else 'Q3'))
+    df_['g1_quantile'] = df_['sucess_rate_g1'].apply(
+                                                    lambda x:
+                                                    'Q1' if x<=df_['sucess_rate_g1'].quantile(0.33)
+                                                    else (
+                                                    'Q2' if x<=df_['sucess_rate_g1'].quantile(0.66)
+                                                    else 'Q3'
+                                                    )
+                                                )
 
-    df_['g0_quantile_score'] = df_['g0_quantile'].apply(lambda x: 1.0 if x=='Q3' else (0.5 if x=='Q2' else 0.25))
+    df_['g0_quantile_score'] = df_['g0_quantile'].apply(
+                                                        lambda x:
+                                                        g0_weight[2] if x=='Q3'
+                                                        else (
+                                                        g0_weight[1] if x=='Q2'
+                                                        else g0_weight[0]
+                                                        )
+                                                    )
 
-    df_['g1_quantile_score'] = df_['g1_quantile'].apply(lambda x: 1.0 if x=='Q3' else (0.3 if x=='Q2' else 0.1))
-
-
-    # df_ = df_.assign(quantile_score=lambda x: x['g0_quantile_score']*x['g1_quantile_score'])
+    df_['g1_quantile_score'] = df_['g1_quantile'].apply(
+                                                        lambda x:
+                                                        g1_weight[2] if x=='Q3'
+                                                        else (
+                                                        g1_weight[1] if x=='Q2'
+                                                        else g1_weight[0]
+                                                        )
+                                                        )
 
     df_ = df_.assign(cherry_score = lambda x: (x['g0_quantile_score']*x['sucess_rate_g0']+x['g1_quantile_score']*x['sucess_rate_g1'])/2)
 
@@ -908,7 +1047,11 @@ def __generate_stats_sucess__(df, variables, target):
     return df_.sort_values(by='cherry_score', ascending=False)
 
 
-def generate_cherry_score(df, variables, target):
+def generate_cherry_score(df, variables, target, only_score=True):
+    """
+    Função que organiza o pipeline necessário para o cálculo do cherry score.
+    
+    """
     classfied_df = __best_threshold_classification__(df=df, variables=variables, target=target)
 
     # creating a column with difficulty group
@@ -916,8 +1059,10 @@ def generate_cherry_score(df, variables, target):
 
     df_score = __generate_stats_sucess__(df=df_difficulty, variables=variables, target=target)
 
-    return df_score
-    # return df_score[['variable', 'cherry_score']]
+    if only_score:
+        return df_score[['variable', 'cherry_score']]
+    else:
+        return df_score
       
 
 
