@@ -946,8 +946,14 @@ def __set_difficulty_group__(df: pd.DataFrame, target: str) -> pd.DataFrame:
     """
     sucess_list = []
     for ind in df.index:
-        rate_0 = df.drop(columns=target).T[ind].value_counts()[0]/df.drop(columns=target).T.shape[0]
-        rate_1 = df.drop(columns=target).T[ind].value_counts()[1]/df.drop(columns=target).T.shape[0]
+        try:
+            rate_0 = df.drop(columns=target).T[ind].value_counts()[0]/df.drop(columns=target).T.shape[0]
+        except KeyError:
+            rate_0 = 0
+        try:
+            rate_1 = df.drop(columns=target).T[ind].value_counts()[1]/df.drop(columns=target).T.shape[0]
+        except KeyError:
+            rate_1 = 0
 
         if df[target].iloc[ind]==0:
             sucess_list.append(rate_0)
