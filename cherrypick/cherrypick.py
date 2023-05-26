@@ -104,6 +104,10 @@ class CatEncoder:
     
 
 class SearchHyperParams:
+    """
+    Agrega as funções a serem utilizadas no estudo dos hiperparâmetros ótimos dos modelos
+    que serão utilizados na etapa de seleção de variáveis.
+    """
     def __init__(self, cross_val=5):
         # Loading model variables
         self.lgbm_model = None
@@ -491,7 +495,7 @@ class CherryPick:
             # redefinindo o verbosity
             optuna.logging.set_verbosity(optuna.logging.DEBUG)
 
-            return [pd.DataFrame(list(zip(np.array(shap_values.feature_names)[arr_order], np.array(shap_values.abs.mean(0).values)[arr_order])), columns=['variavel', 'shap_score']),
+            return [pd.DataFrame(list(zip(np.array(shap_values.feature_names)[arr_order], np.array(shap_values.abs.mean(0).values)[arr_order])), columns=['variable', 'shap_score']),
             shap_values]
 
         if not self.lgbModel:
@@ -508,107 +512,112 @@ class CherryPick:
         # redefinindo o verbosity
         optuna.logging.set_verbosity(optuna.logging.DEBUG)
 
-        return [pd.DataFrame(list(zip(np.array(shap_values.feature_names)[arr_order], np.array(shap_values.abs.mean(0).values)[arr_order])), columns=['variavel', 'shap_score']),
+        return [pd.DataFrame(list(zip(np.array(shap_values.feature_names)[arr_order], np.array(shap_values.abs.mean(0).values)[arr_order])), columns=['variable', 'shap_score']),
         shap_values]
 
 
     def data_shap_score(self) -> pd.DataFrame:  
-        metrica = 'shap_score_'+self.target
-        # dic_ = {
-        #     'variavel': [],
-        #     metrica: []
-        # }
-        print(f'\n--- INICIALIZANDO A ESCORAGEM VIA SHAP SCORE PARA O ALVO {self.target}---\n ')
+        """
+        Classify the feature importance according to the shap score metric.
+        """
+        metric = 'shap_score_'+self.target
+        print(f'\n--- STARTING SHAP SCORING FOR TARGET: {self.target}---\n ')
         aux = self.gera_shap_score(self.data, self.variables, self.target)[0]
-        aux = aux.rename(columns={'shap_score': metrica})
-        print(f'\n--- FINALIZADA A ESCORAGEM VIA SHAP SCORE PARA O ALVO {self.target}---\n ')
+        aux = aux.rename(columns={'shap_score': metric})
+        print(f'\n--- FINISHED SHAP SCORING FOR TARGET: {self.target}---\n ')
         return aux
 
 
     def data_lgbm_gain(self) -> pd.DataFrame:
-        print(f'\n--- INICIALIZANDO A ESCORAGEM VIA LGBM GAIN PARA O ALVO {self.target}---\n ')
+        """
+        Classify the feature importance according to the gain of entropy in a boost model.
+        """
+        print(f'\n--- STARTING BOOST GAIN SCORING FOR TARGET: {self.target}---\n ')
         if not self.lgbModel:
             self._run_lgbm(self.data, self.variables, self.target)
-        metrica = 'lightGBM_gain_'+self.target
+        metric = 'lightGBM_gain_'+self.target
 
-        print(f'\n--- FINALIZADA A ESCORAGEM VIA LGBM GAIN PARA O ALVO {self.target}---\n ')
+        print(f'\n--- FINISHED BOOST GAIN SCORING FOR TARGET: {self.target}---\n ')
 
         return pd.DataFrame(list(zip(
                                     #  [x.replace('_', ' ') for x in self.lgbModel.feature_name_],
                                      self.lgbModel.feature_name_,
                                      self.lgbModel.booster_.feature_importance(importance_type='gain'))),
-                                     columns=['variavel', metrica]).sort_values(by=metrica, ascending=False)
+                                     columns=['variable', metric]).sort_values(by=metric, ascending=False)
 
 
     def data_lgbm_split(self) -> pd.DataFrame:
-        print(f'\n--- INICIALIZANDO A ESCORAGEM VIA LGBM SPLIT PARA O ALVO {self.target}---\n ')
+        """
+        Classify the feature importance according to the split of entropy in a boost model.
+        """
+        print(f'\n--- STARTING BOOST SPLIT SCORING FOR TARGET: {self.target}---\n ')
         if not self.lgbModel:
             self._run_lgbm(self.data, self.variables, self.target)
-        metrica = 'lightGBM_split_'+self.target
+        metric = 'lightGBM_split_'+self.target
 
-        print(f'\n--- FINALIZADA A ESCORAGEM VIA LGBM SPLIT PARA O ALVO {self.target}---\n ')
+        print(f'\n--- FINISHED BOOST SPLIT SCORING FOR TARGET: {self.target}---\n ')
 
         return pd.DataFrame(list(zip(
                                     #  [x.replace('_', ' ') for x in self.lgbModel.feature_name_],
                                      self.lgbModel.feature_name_,
                                      self.lgbModel.booster_.feature_importance(importance_type='split'))),
-                                     columns=['variavel', metrica]).sort_values(by=metrica, ascending=False)
+                                     columns=['variable', metric]).sort_values(by=metric, ascending=False)
 
 
     def data_logistic_roc(self) -> pd.DataFrame:
         """
-        Gera uma tabela ranqueando as variáveis com maior roc na regressão logística
+        Classify the feature importance according to the roc of a logistic model.
         """
 
-        print(f'\n--- INICIALIZANDO A ESCORAGEM VIA ROC LOGISTICA PARA O ALVO {self.target}---\n ')
+        print(f'\n--- STARTING LOGISTIC ROC SCORING FOR TARGET: {self.target}---\n ')
         metrica = 'logistic_roc_'+ self.target
         dic_ = {
-            'variavel': [],
+            'variable': [],
             metrica: []
         }
 
-        for variavel in tqdm(self.variables):
-            dic_['variavel'].append(variavel)
-            dic_[metrica].append(self.logistic_roc(self.data, variavel, self.target))
+        for variable in tqdm(self.variables, desc='logistic-roc metric'):
+            dic_['variable'].append(variable)
+            dic_[metrica].append(self.logistic_roc(self.data, variable, self.target))
 
-        print(f'\n--- FINALIZADA A ESCORAGEM VIA ROC LOGISTICA PARA O ALVO {self.target}---\n ')
+        print(f'\n--- FINISHED LOGISTIC ROC SCORING FOR TARGET: {self.target}---\n ')
         return pd.DataFrame(dic_).sort_values(by=metrica, ascending=False)
 
 
     def data_mutual_info(self) -> pd.DataFrame:
         """
-        Gera uma tabela ranqueando as variáveis com maior informação mútua
+        Classify the feature importance according to the mutual information.
         """
 
-        print(f'\n--- INICIALIZANDO A ESCORAGEM VIA MUTUAL INFO PARA O ALVO {self.target}---\n ')
+        print(f'\n--- STARTING MUTUAL INFORMATION SCORING FOR TARGET: {self.target}---\n ')
 
         metrica = 'mutual_info_' + self.target
         dic_ = {
-            'variavel': [],
+            'variable': [],
             metrica: []
         }
 
-        for variavel in tqdm(self.variables):
-            dic_['variavel'].append(variavel)
-            dic_[metrica].append(self.mutual_info(self.data, variavel, self.target)[0])
+        for variable in tqdm(self.variables, desc='mutual information metric'):
+            dic_['variable'].append(variable)
+            dic_[metrica].append(self.mutual_info(self.data, variable, self.target)[0])
 
-        print(f'\n--- FINALIZADA A ESCORAGEM VIA MUTUAL INFO PARA O ALVO {self.target}---\n ')
+        print(f'\n--- FINISHED THE MUTUAL INFORMATION SCORING FOR TARGET: {self.target}---\n ')
 
         return pd.DataFrame(dic_).sort_values(by=metrica, ascending=False)
 
 
     def data_tree_gain(self) -> pd.DataFrame:
-        print(f'\n--- INICIALIZANDO A ESCORAGEM VIA DECISION TREE GAIN PARA O ALVO {self.target}---\n ')
+        print(f'\n--- STARTING THE DECISION TREE GAIN SCORING FOR TARGET: {self.target}---\n ')
         if not self.treeModel:
             self.run_tree(self.data, self.variables, self.target)
         metrica = 'decisionTree_gain_'+self.target
 
-        print(f'\n--- FINALIZADA A ESCORAGEM VIA DECISION TREE GAIN PARA O ALVO {self.target}---\n ')
+        print(f'\n--- FINISHED THE DECISION TREE GAIN SCORING FOR TARGET: {self.target}---\n ')
 
 
         return pd.DataFrame(list(zip(self.treeModel.feature_names_in_,
                             self.treeModel.feature_importances_)),
-                            columns=['variavel', metrica]).sort_values(by=metrica, ascending=False)
+                            columns=['variable', metrica]).sort_values(by=metrica, ascending=False)
 
 
     def get_feature_importances(
@@ -617,13 +626,36 @@ class CherryPick:
                                 mutual_info = True,
                                 shap_score = True,
                                 tree_gain = True,
-                                lgbm_gain = True,
-                                lgbm_split = True,
+                                boost_gain = True,
+                                boost_split = True,
                                 cache: bool=True
                                 ) -> pd.DataFrame:
         """
-        Gera uma tabela compilando os resultados da roc logística, roc catboost,
-        ganho de entropia catboost, e informação mútua
+        Generate a table compiling the results of each metric using to compare the
+        feature importance.
+
+        Parameters:
+        ----------
+        logistic_roc: bool | default: True
+        If True, Inserts the process to calculate the logistic_roc metric
+        in the feature selection pipeline.
+
+        mutual_info: bool | default: True
+        If True, Inserts the process to calculate the mutual information metric
+        in the feature selection pipeline.
+
+        shap_score: bool | default: True
+        If True, Insertsthe process to calculate the shap_score metric
+        in the feature selection pipeline.
+
+        tree_gain: bool | default: True
+        If True, Insertsthe process to calculate the tree_gain metric
+        in the feature selection pipeline.
+
+        boost_gain: bool | default: True
+        If True, Insertsthe process to calculate the lgbm_gain metric
+        in the feature selection pipeline.
+
         """
 
 
@@ -670,7 +702,7 @@ class CherryPick:
             else:
                 pass
 
-            if lgbm_gain:
+            if boost_gain:
                 try:
                     temp_.append(self.data_lgbm_gain())
                 except Exception as e:
@@ -679,7 +711,7 @@ class CherryPick:
             else:
                 pass
 
-            if lgbm_split:
+            if boost_split:
                 try:
                     temp_.append(self.data_lgbm_split())
                 except Exception as e:
@@ -689,9 +721,9 @@ class CherryPick:
                 pass
 
             try:
-                self.data_most_important = reduce(lambda right, left: pd.merge(right, left, on='variavel'), temp_)
+                self.data_most_important = reduce(lambda right, left: pd.merge(right, left, on='variable'), temp_)
             except:
-                print('Alguma coisa deu errado!')
+                print('Something goes wrong!')
             return self.data_most_important
 
 
@@ -751,8 +783,8 @@ class CherryPick:
         
     def calculate_score(self, df: pd.DataFrame, metrics_column: list, strategy='standard'):
         """
-        Dado o dataframe, e as colunas com as métricas. Calcula o score por ranqueamento das métricas.
-        A primeira coluna do dataframe deve ser a coluna de variáveis. Todas as demais devem ser numéricas.
+        Given the dataframe, and the columns with the metrics. Calculates the score by ranking the metrics.
+        The first column of the dataframe must be the variables column. All others must be numeric.
         """
 
         if strategy == 'standard':
@@ -765,35 +797,33 @@ class CherryPick:
 
 
 
-def limiar_score(predictions: Union[list, np.ndarray], target: Union[list, np.ndarray]) -> dict:
+def threshold_score(predictions: Union[list, np.ndarray], target: Union[list, np.ndarray]) -> dict:
     """
-    Dada uma entrada de previsão probabilística, e uma lista com a variável alvo real,
-    obtém o limiar ótimo de classificação.
 
-    Parâmetros:
+    Given a probabilistic prediction input, and a list with the actual target variable,
+    obtains the optimal classification threshold.
+
+    Parameters:
     ----------
     predictions: Union[list, np.ndarray]
-    Iterável com probabilidades de previsão da variável alvo.
+    Iterable with predicted probabilities from target variable.
 
     target: Union[list, np.ndarray]
-    Iterável com as informações reais da variável alvo.
+    Iterable with the real information from the target variable.
 
-    Retorna:
+    Returns:
     -------
-    limiar_score: dict
-    Dicionário com informação do limiar ótimo e de algumas de suas métricas de classificação
-    como precisão, recall, acurácia, roc-auc e f1-score.
+    threshold_score: dict
+    Dictionary with information on the optimal threshold and some of its ranking metrics
+    such as precision, recall, accuracy, roc-auc and f1-score.
 
     Developed by: Vinícius Ormenesse - https://github.com/ormenesse
     """
-    #Imprimindo limiar de Escore
     fpr, tpr, threshold = roc_curve(target, predictions)
     i = np.arange(len(tpr)) 
     roc = pd.DataFrame({'tf' : pd.Series(tpr-(1-fpr), index=i), 'threshold' : pd.Series(threshold, index=i)})
     roc_t = roc.loc[(roc.tf-0).abs().argsort()[:1]]
-    # print('Limiar que maxima especificidade e sensitividade:')
-    # print(list(roc_t['threshold']))
-    #analisando modelo com novo limiar
+
     tn, fp, fn, tp = confusion_matrix(target, [1 if item>=list(roc_t['threshold'])[0] else 0 for item in predictions]).ravel()
     Precision = tp/(tp+fp)
     Recall = tp/(tp+fn)
@@ -809,25 +839,26 @@ def limiar_score(predictions: Union[list, np.ndarray], target: Union[list, np.nd
 
 def __get_features_threshold_score__(df: pd.DataFrame, variables: Union[list, np.ndarray], target: str) -> pd.DataFrame:
     """
-    Obtém o limiar ótimo de classificação de cada variável especificada.
+    Gets the optimal threshold classification of each specified variable.
 
-    Parâmetros:
+    Parameters:
     ----------
     df: pd.DataFrame
-    base de dados que contém os dados referentes à variável explicativa e a variável alvo.
+    Dataframe that contains data referring to the explanatory variable and the target variable.
 
     variables: Union[list, np.ndarray]
-    lista com o nome das variáveis explicativas que se deseja obter o limiar de classificação ótimo.
+    List with the name of the explanatory variables for which the optimal
+    classification threshold is to be obtained.
 
     target: Union[list, np.ndarray]
-    nome da variável alvo
+    Target variable name
 
-    Retorna:
+    Returns:
     -------
     __get_features_threshold_score__: pd.DataFrame
-    Dataframe contendo para cada variável explicativa o seu limiar normalizada e não-normalizado.
-    O limiar especifica a partir de qual valor, podemos delimitar as classes da variável alvo de 
-    maneira a otimizar a especificidade e sensitividade.
+    Dataframe containing for each explanatory variable its normalized and non-normalized threshold.
+    The threshold specifies from which value, we can delimit the classes of the target variable of
+    way to optimize specificity and sensitivity.
 
 
     
@@ -840,7 +871,7 @@ def __get_features_threshold_score__(df: pd.DataFrame, variables: Union[list, np
         temp[variable] = scale.fit_transform(df[[variable]])
         temp[variable] = temp[variable].fillna(-1)
 
-        limiar_temp = limiar_score(temp[variable], temp[target])
+        limiar_temp = threshold_score(temp[variable], temp[target])
         limiar_temp.update({'variable': variable})
         limiar_temp.update({'threshold_variable': scale.inverse_transform([[limiar_temp['threshold']]])[0][0]})
 
@@ -850,27 +881,28 @@ def __get_features_threshold_score__(df: pd.DataFrame, variables: Union[list, np
 
 def __best_threshold_classification__(df: pd.DataFrame, variables: Union[list, np.ndarray], target: str) -> pd.DataFrame:
     """
-    Realiza uma previsão da variável alvo a partir de cada uma de suas variáveis explicativas,
-    a classificação é realizada de maneira separada entre as variáveis explicativas, utilizando
-    apenas os seus respectivos valores de limiar ótimo. A ordem de classificação a partir do 
-    limiar é definida de acordo com a ordem que oferece a classificação de maior roc.
+    Performs a prediction of the target variable from each of its explanatory variables,
+    the classification is carried out separately between the explanatory variables, using
+    only their respective optimal threshold values. The sort order from the
+    threshold is defined according to the order that offers the highest roc rating.
 
-    Parâmetros:
+    Parameters:
     ----------
     df: pd.DataFrame
-    base de dados que contém os dados referentes à variável explicativa e a variável alvo.
+    Dataframe that contains data referring to the explanatory variable and the target variable.
 
     variables: Union[list, np.ndarray]
-    lista com o nome das variáveis explicativas
+    List with the name of explicable variables.
 
-    Retorna:
+    Returns:
     -------
     __best_threshold_classification__: pd.DataFrame
-    Um dataframe cuja cada coluna apresenta a classificação do mesmo a partir do seu limiar
-    ótimo.
+
+    A dataframe whose each column presents its classification based on its optimal
+    threshold.
 
     target: Union[list, np.ndarray]
-    nome da variável alvo
+    Target variable name
 
     """
     temp_ = __get_features_threshold_score__(df, variables, target)
@@ -947,35 +979,37 @@ def __generate_stats_sucess__(
                              ) -> pd.DataFrame:
     
     """
-    Gera o cherry score juntamente com as estatísticas utilizadas para o cálculo do mesmo.
-    Dentre as estatísticas estão a faixa da taxa de acerto de cada variável entre os grupos
-    de maior e menor dificuldade de classificação, quartil da variável em relação aos grupos,
-    e o cherry score.
+    It generates the cherry score along with the statistics used to calculate it.
+    Among the statistics are the range of the success rate of each variable between the groups
+    of greater and lesser difficulty in classifying, quartile of the variable in relation to the groups,
+    and the cherry score.
 
-    Parâmetros:
+    Parameters:
     ----------
     df: pd.DataFrame
-    base de dados com as variáveis que se deseja obter o cherry score
+    Dataframe that contains data referring to the explanatory variable and the target variable.
 
     variables: Union[list, np.ndarray]
-    iterável com as variáveis que se deseja calcular o cherry score
+    Iterable with the variables you want to calculate the cherry score
 
     target:
-    variável alvo
+    Target variable name
 
     g0_weight: list
-    Peso dado de acordo com a taxa de acerto de uma variável no grupo das linhas mais fáceis.
-    O peso é associado ao quartil que a variável assume no grupo. Quanto menor o quartil, menos
-    acertos a variável teve no grupo, portanto, menor será o peso.
+    Weight given according to the hit rate of a variable in the group of easiest lines.
+    The weight is associated with the quartile that the variable assumes in the group.
+    The lower the quartile, the less number of hits the variable had in the group,
+    therefore, the weight will be lower.
 
     g1_weight: list
-    Peso dado de acordo com a taxa de acerto de uma variável no grupo das linhas mais difíceis.
-    O peso é associado ao quartil que a variável assume no grupo. Quanto menor o quartil, menos
-    acertos a variável teve no grupo, portanto, menor será o peso.
+    Weight given according to the hit rate of a variable in the group of the most difficult lines.
+    The weight is associated with the quartile that the variable assumes in the group. The lower
+    the quartile, the less number of hits the variable had in the group, therefore, the weight will
+    be lower.
 
-    Retorna:
+    Returns:
     __generate_stats_sucess__: pd.DataFrame
-    Dataframe com cherry score, juntamente com as métricas estatísticas utilizadas para o seu cálculo.
+    Dataframe with cherry score, together with the statistical metrics used for its calculation.
     -------
 
 
