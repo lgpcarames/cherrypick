@@ -26,8 +26,9 @@ Some tools to help the process of feature selection
 Features
 --------
 
-* CherryPick: gives an entire pipeline with several techniques to measure feature importance.
-Returns a rank with the most important variables sorted by its score calculated.
+* CherryPick: utilizes the competitive scoring technique, offering a comprehensive pipeline
+that incorporates multiple techniques to measure feature importance. It provides a ranked
+list of the most important variables, sorted based on their calculated scores.
 
 * cherry_score: unique score developed exclusively for this library.  It assesses the
 importance of a variable by evaluating its ability to classify a row based on the
