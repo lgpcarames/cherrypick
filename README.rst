@@ -16,17 +16,23 @@ cherrypick
 
 
 
-Library that contains several techiniques for feature selection
+Some tools to help the process of feature selection
 
 
 * Free software: MIT license
-* Documentation: https://cherrypick.readthedocs.io.
+* Documentation: https://cherrypick.readthedocs.io. (work in progress!)
 
 
 Features
 --------
 
-* TODO
+* CherryPick: gives an entire pipeline with several techniques to measure feature importance.
+Returns a rank with the most important variables sorted by its score calculated.
+
+* cherry_score: unique score developed exclusively for this library.  It assesses the
+importance of a variable by evaluating its ability to classify a row based on the
+performance of other variables.
+
 
 Credits
 -------
