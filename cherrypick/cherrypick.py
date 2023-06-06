@@ -309,7 +309,7 @@ class CherryPick:
         self.data_log_tree = None
 
         # Output data
-        self.data_most_important = pd.DataFrame()
+        self.data_most_important = None
 
         # Loading models
         self.lgbModel = None
@@ -682,7 +682,7 @@ class CherryPick:
                 print(e)
 
         try:
-            self.data_most_important = pd.merge(*temp_, on='variable')
+            self.data_most_important = reduce(lambda left, right: pd.merge(left, right, on='variable'), temp_)
         except:
             print('Something went wrong!')
 
@@ -706,7 +706,7 @@ class CherryPick:
         return df_.sort_values(by='standard_score', ascending=False)
 
     def __cluster_score__(self, df, metrics_column, n_cluster=8, init='k-means++', n_init=10,
-                          tol=1e-4, verbose=0, random_state=13, algorithm='lloyd'):
+                          tol=1e-4, verbose=0, random_state=13):
         """
         Calculate the cluster score for ranking metrics.
         """
@@ -724,7 +724,6 @@ class CherryPick:
                         tol=tol,
                         verbose=verbose,
                         random_state=random_state,
-                        algorithm=algorithm
                         )
         cluster.fit(df_scaled[metrics_column[1:]])
 
@@ -733,7 +732,7 @@ class CherryPick:
 
         return df_.sort_values(by='cluster_score', ascending=False)
 
-    def calculate_score(self, df, metrics_column, strategy='standard'):
+    def competitive_score(self, df, metrics_column, strategy='standard'):
         """
         Calculate the score for ranking metrics based on the specified strategy.
 
@@ -746,7 +745,7 @@ class CherryPick:
             List of columns containing the metrics.
 
         strategy: str, optional (default: 'standard')
-            The scoring strategy to use. Can be 'standard' or 'cluster_score'.
+            The scoring strategy to use. Can be 'standard' or 'cluster'.
 
         Returns:
         --------
@@ -755,7 +754,7 @@ class CherryPick:
         """
         if strategy == 'standard':
             return self.__standard_score__(df=df, metrics_column=metrics_column)
-        elif strategy == 'cluster_score':
+        elif strategy == 'cluster':
             return self.__cluster_score__(df=df, metrics_column=metrics_column)
 
 
@@ -1014,7 +1013,7 @@ def __generate_stats_sucess__(
     return df_.sort_values(by='cherry_score', ascending=False)
 
 
-def generate_cherry_score(df, variables, target, only_score=True):
+def cherry_score(df, variables, target, only_score=True):
     """
     Function that organizes the pipeline necessary for calculating the cherry score.
 
