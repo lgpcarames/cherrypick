@@ -781,7 +781,7 @@ class CherryPick:
 
 
         
-    def calculate_score(self, df: pd.DataFrame, metrics_column: list, strategy='standard'):
+    def competitive_score(self, df: pd.DataFrame, metrics_column: list, strategy='standard'):
         """
         Given the dataframe, and the columns with the metrics. Calculates the score by ranking the metrics.
         The first column of the dataframe must be the variables column. All others must be numeric.
@@ -1087,10 +1087,29 @@ def __generate_stats_sucess__(
     return df_.sort_values(by='cherry_score', ascending=False)
 
 
-def generate_cherry_score(df, variables, target, only_score=True):
+def cherry_score(df: pd.DataFrame, variables: Union[list, np.ndarray], target: str, only_score=True):
     """
-    Função que organiza o pipeline necessário para o cálculo do cherry score.
-    
+    Function that sets the pipeline to properly calculate the cherry score.
+
+    Parameters:
+    ----------
+    df: pd.DataFrame
+    Dataframe that contains data referring to the explanatory variable and the target variable.
+
+    variables: Union[list, np.ndarray]
+    Iterable with the variables you want to calculate the cherry score
+
+    target: str
+    Target variable name
+
+    only_score: bool
+    if True, returns a dataframe with features names and cherry_score, if False, also returns all the
+    statiscal features that are used to obtain the cherry_score.
+
+    Returns
+    -------
+    generate_cherry_score: pd.DataFrame
+    DataFrame with cherry_score of each feature selected to study.    
     """
     classfied_df = __best_threshold_classification__(df=df, variables=variables, target=target)
 
