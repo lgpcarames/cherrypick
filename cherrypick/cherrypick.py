@@ -732,14 +732,16 @@ class CherryPick:
 
         return df_.sort_values(by='cluster_score', ascending=False)
 
-    def competitive_score(self, df, metrics_column, strategy='standard'):
+    def competitive_score(self, df: pd.DataFrame, metrics_column: list, strategy='standard'):
         """
-        Calculate the score for ranking metrics based on the specified strategy.
+        Given the dataframe, and the columns with the metrics. Calculates the score by ranking the metrics.
+        The first column of the dataframe must be the variables column. All others must be numeric.
 
         Parameters:
         -----------
         df: pd.DataFrame
             Dataframe containing the metrics.
+
 
         metrics_column: list
             List of columns containing the metrics.
@@ -1013,32 +1015,33 @@ def __generate_stats_sucess__(
     return df_.sort_values(by='cherry_score', ascending=False)
 
 
-def cherry_score(df, variables, target, only_score=True):
+
+def cherry_score(df: pd.DataFrame, variables: Union[list, np.ndarray], target: str, only_score=True):
     """
-    Function that organizes the pipeline necessary for calculating the cherry score.
+    Function that sets the pipeline to properly calculate the cherry score.
 
     Parameters:
-    -----------
-    df : pd.DataFrame
-        Dataframe that contains data referring to the explanatory variable and the target variable.
+    ----------
+    df: pd.DataFrame
+    Dataframe that contains data referring to the explanatory variable and the target variable.
 
-    variables : iterable
-        Iterable with the variables for which the cherry score is to be calculated.
+    variables: Union[list, np.ndarray]
+    Iterable with the variables you want to calculate the cherry score
 
-    target : str
-        Name of the target variable.
+    target: str
+    Target variable name
 
-    only_score : bool, optional
-        If True, only return the dataframe with variable and cherry score.
-        If False, return the entire dataframe with cherry score statistics.
+    only_score: bool
+    if True, returns a dataframe with features names and cherry_score, if False, also returns all the
+    statiscal features that are used to obtain the cherry_score.
 
-    Returns:
-    --------
-    DataFrame
-        Dataframe with the cherry score or the entire dataframe with cherry score statistics, depending on the value of `only_score`.
-
+    Returns
+    -------
+    generate_cherry_score: pd.DataFrame
+    Dataframe with the cherry score or the entire dataframe with cherry score statistics,
+    depending on the value of `only_score`.
     """
-
+    
     classified_df = __best_threshold_classification__(df=df, variables=variables, target=target)
 
     # Creating a column with difficulty group
