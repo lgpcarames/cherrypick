@@ -122,9 +122,11 @@ def test_cherry_score():
     variables = data.feature_names  # Define the list of variables
     target =   'target' # Define the target variable
     result = cherry_score(df, variables, target)
-    assert isinstance(result, pd.DataFrame)
-    assert result.shape[0] == len(variables)
-    assert all(col in result.columns for col in ['variable', 'cherry_score'])
+    assert isinstance(result, pd.DataFrame), 'the outcome is not a dataframe type'
+    assert result.shape[0] == len(variables), 'the num of rows in the outcome is not equal to the num of variables'
+    assert all(col in result.columns for col in ['variable', 'cherry_score']), 'the cols variables and/or cherry_score are not present in the cols of outcome'
+    assert isinstance(cherry_score(df[[variables[0]]+[target]], [variables[0]], target), pd.DataFrame), 'the outcome type when you have only an unique input col is not a dataframe'
+
 
 
 # Run the tests
