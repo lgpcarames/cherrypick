@@ -951,7 +951,7 @@ def __generate_stats_sucess__(
     target: str,
     g0_weight=[0.1, 0.3, 1.0],
     g1_weight=[0.25, 0.5, 1.0]
-) -> pd.DataFrame:
+    ) -> pd.DataFrame:
     """
     Generate the cherry score along with the statistics used to calculate it.
     The statistics include the success rate range of each variable between the groups of greater and lesser difficulty
@@ -1041,7 +1041,21 @@ def cherry_score(df: pd.DataFrame, variables: Union[list, np.ndarray], target: s
     Dataframe with the cherry score or the entire dataframe with cherry score statistics,
     depending on the value of `only_score`.
     """
-    
+    assert not isinstance(variables, str), 'TypeError: variables must not be a string type variable'
+
+    try:
+        iter(variables)
+    except TypeError:
+        raise TypeError('variables must be an iterable')
+
+    if len(variables)==1:
+        classified_df = __best_threshold_classification__(df=df, variables=variables, target=target)
+
+        df_difficulty = __set_difficulty_group__(df=classified_df, target=target)
+
+        return pd.DataFrame({'variable': variables, 'cherry_score': df_difficulty['success_rate'].sum()/df_difficulty.shape[0]})
+
+
     classified_df = __best_threshold_classification__(df=df, variables=variables, target=target)
 
     # Creating a column with difficulty group

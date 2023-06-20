@@ -1,10 +1,12 @@
-.. highlight:: shell
+..
+    highlight:: shell
 
 ============
 Contributing
 ============
 
-Contributions are welcome, and they are greatly appreciated! Every little bit
+This library is completely under construction. So any contributions are
+welcome, and they are greatly appreciated! Every little bit
 helps, and credit will always be given.
 
 You can contribute in many ways:
