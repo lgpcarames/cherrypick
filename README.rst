@@ -1,17 +1,21 @@
+.. image:: docs/figs/cherrypick.png
+
 ==========
 cherrypick
 ==========
 
+..
+        .. image:: https://img.shields.io/pypi/v/cherrypick.svg
+                :target: https://pypi.python.org/pypi/cherrypick
 
-.. image:: https://img.shields.io/pypi/v/cherrypick.svg
-        :target: https://pypi.python.org/pypi/cherrypick
+        .. image:: https://img.shields.io/travis/lgpcarames/cherrypick.svg
+                :target: https://travis-ci.com/lgpcarames/cherrypick
 
-.. image:: https://img.shields.io/travis/lgpcarames/cherrypick.svg
-        :target: https://travis-ci.com/lgpcarames/cherrypick
+        .. image:: https://readthedocs.org/projects/cherrypick/badge/?version=latest
+                :target: https://cherrypick.readthedocs.io/en/latest/?version=latest
+                :alt: Documentation Status
 
-.. image:: https://readthedocs.org/projects/cherrypick/badge/?version=latest
-        :target: https://cherrypick.readthedocs.io/en/latest/?version=latest
-        :alt: Documentation Status
+
 
 
 
@@ -45,7 +49,7 @@ The model allows for the use of a standard pipeline with various metrics and cla
 
 Using the breast cancer Wisconsin dataset as an example, we can obtain the following example dataframe:
 
-.. image:: /home/lcarames/Documentos/CherryPick/cherrypick/docs/figs/competitive_score.png
+.. image:: docs/figs/competitive_score.png
    :width: 1800px
    :alt: competitive_score_winsconsin_dataset
 

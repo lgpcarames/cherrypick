@@ -1,0 +1,163 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+    <title>cherrypick API Guide &#8212; cherrypick 0.1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="cherrypick-api-guide">
+<h1>cherrypick API Guide<a class="headerlink" href="#cherrypick-api-guide" title="Permalink to this heading">¶</a></h1>
+<p>The competitive score is defined in the class CherryPick</p>
+<section id="cherrypick">
+<h2>CherryPick<a class="headerlink" href="#cherrypick" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="cherrypick.CherryPick">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cherrypick.</span></span><span class="sig-name descname"><span class="pre">CherryPick</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">study_cross_val</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_studies</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overfit_thres</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_lr_study</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_lgb_study</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log_tree_study</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">baseline</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cherrypick/cherrypick.html#CherryPick"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cherrypick.CherryPick" title="Permalink to this definition">¶</a></dt>
+<dd><p>CherryPick class for feature importance analysis and scoring.</p>
+<dl class="simple">
+<dt>data: pd.DataFrame</dt><dd><p>Input dataframe containing the data.</p>
+</dd>
+<dt>variables: list</dt><dd><p>List of variable names.</p>
+</dd>
+<dt>target: str</dt><dd><p>Target variable name.</p>
+</dd>
+
+
+<dl class="py method">
+<dt class="sig sig-object py" id="cherrypick.CherryPick.competitive_score">
+<span class="sig-name descname"><span class="pre">competitive_score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metrics_column</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strategy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'standard'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cherrypick/cherrypick.html#CherryPick.competitive_score"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cherrypick.CherryPick.competitive_score" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given the dataframe, and the columns with the metrics. Calculates the score by ranking the metrics.
+The first column of the dataframe must be the variables column. All others must be numeric.</p>
+<dl class="simple">
+<dt>df: pd.DataFrame</dt><dd><p>Dataframe containing the metrics.</p>
+</dd>
+<dt>metrics_column: list</dt><dd><p>List of columns containing the metrics.</p>
+</dd>
+<dt>strategy: str, optional (default: ‘standard’)</dt><dd><p>The scoring strategy to use. Can be ‘standard’ or ‘cluster’.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</dd></dl>
+</section>
+
+<section id="cherry_score"></section>
+<h2>cherry_score<a class="headerlink" href="#cherrypick-api-guide" title="Permalink to this heading">¶</a></h2>
+<dl class="py method">
+<dt class="sig sig-object py" id="cherrypick.cherry_score">
+<em class="property"><span class="pre">def</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">cherrypick.</span></span><span class="sig-name descname"><span class="pre">cherry_score</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/cherrypick/cherrypick.html#cherry_score"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#cherrypick.cherry_score" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that sets the pipeline to properly calculate the cherry score.</p>
+<dl class="simple">
+<dt>df: pd.DataFrame</dt><dd><p>Dataframe that contains data referring to the explanatory variable and the target variable.</p>
+</dd>
+<dt>variables: Union[list, np.ndarray]</dt><dd><p>Iterable with the variables you want to calculate the cherry score.</p>
+</dd>
+<dt>target: str</dt><dd><p>Target variable name.</p>
+</dd>
+<dt>only_score: bool</dt><dd><p>if True, returns a dataframe with features names and cherry_score, if False, also returns all the
+  statiscal features that are used to obtain the cherry_score.</p>
+</dd>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">cherrypick</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="readme.html">cherrypick</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="authors.html">Credits</a></li>
+<li class="toctree-l1"><a class="reference internal" href="history.html">History</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Lucas Carames.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 5.0.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/api.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
