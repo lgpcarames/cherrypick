@@ -10,7 +10,8 @@ import numpy as np
 import lightgbm as lgb
 import optuna
 from tqdm import tqdm
-
+import shap
+import warnings
 from sklearn.model_selection import StratifiedKFold
 from functools import reduce
 from typing import Union, Any, List
@@ -19,16 +20,12 @@ from typing import Union, Any, List
 from sklearn.metrics import roc_auc_score, roc_curve, confusion_matrix
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.dummy import DummyClassifier
 from sklearn.preprocessing import MinMaxScaler
 
 from sklearn.cluster import KMeans
 
-import shap
-
-import warnings
 
 warnings.filterwarnings('ignore')
 # Categorical features process
@@ -946,12 +943,12 @@ def __set_difficulty_group__(df: pd.DataFrame, target: str) -> pd.DataFrame:
 
 
 def __generate_stats_sucess__(
-    df: pd.DataFrame,
-    variables: Union[list, np.ndarray],
-    target: str,
-    g0_weight=[0.1, 0.3, 1.0],
-    g1_weight=[0.25, 0.5, 1.0]
-    ) -> pd.DataFrame:
+                            df: pd.DataFrame,
+                            variables: Union[list, np.ndarray],
+                            target: str,
+                            g0_weight=[0.1, 0.3, 1.0],
+                            g1_weight=[0.25, 0.5, 1.0]
+                            ) -> pd.DataFrame:
     """
     Generate the cherry score along with the statistics used to calculate it.
     The statistics include the success rate range of each variable between the groups of greater and lesser difficulty

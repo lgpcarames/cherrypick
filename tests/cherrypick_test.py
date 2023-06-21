@@ -2,32 +2,21 @@
 
 """Tests for `cherrypick` package."""
 
-import pandas as pd
 import sys
-sys.path.insert(0, r'/home/lcarames/Documentos/CherryPick/cherrypick')
-
-import cherrypick as cp
-from sklearn.datasets import load_breast_cancer
-
-
-
-
-data = load_breast_cancer()
-variables = data.feature_names
-target = 'target'
-df = pd.DataFrame(data.data, columns=data.feature_names) # Create a test DataFrame
-df['target'] = data.target
-
-
 import pytest
-from cherrypick import (
-    threshold_score,
+import pandas as pd
+from sklearn.datasets import load_breast_cancer
+sys.path.insert(0, r'/cherrypick')
+from cherrypick import (threshold_score,
     __get_features_threshold_score__,
     __best_threshold_classification__,
     __set_difficulty_group__,
     __generate_stats_sucess__,
-    cherry_score,
-)
+      cherry_score
+    )
+
+data = load_breast_cancer()
+
 
 
 # Test threshold_score function
@@ -54,7 +43,8 @@ def test_threshold_score():
 # Test _get_features_threshold_score_ function
 def test_get_features_threshold_score():
     data = load_breast_cancer()
-    df = pd.DataFrame(data.data, columns=data.feature_names) # Create a test DataFrame
+    df = pd.DataFrame(data.data,
+                      columns=data.feature_names) # Create a test DataFrame
     df['target'] = data.target
     variables = data.feature_names  # Define the list of variables
     target =   'target' # Define the target variable
@@ -69,7 +59,8 @@ def test_get_features_threshold_score():
 # Test _best_threshold_classification_ function
 def test_best_threshold_classification():
     data = load_breast_cancer()
-    df = pd.DataFrame(data.data, columns=data.feature_names) # Create a test DataFrame
+    df = pd.DataFrame(data.data,
+                      columns=data.feature_names) # Create a test DataFrame
     df['target'] = data.target
     variables = data.feature_names  # Define the list of variables
     target =   'target' # Define the target variable
@@ -81,7 +72,8 @@ def test_best_threshold_classification():
 # Test _set_difficulty_group_ function
 def test_set_difficulty_group():
     data = load_breast_cancer()
-    df = pd.DataFrame(data.data, columns=data.feature_names) # Create a test DataFrame
+    df = pd.DataFrame(data.data,
+                      columns=data.feature_names) # Create a test DataFrame
     df['target'] = data.target
     variables = data.feature_names  # Define the list of variables
     target =   'target' # Define the target variable
@@ -98,7 +90,8 @@ def test_set_difficulty_group():
 # Test _generate_stats_sucess_ function
 def test_generate_stats_sucess():
     data = load_breast_cancer()
-    df = pd.DataFrame(data.data, columns=data.feature_names) # Create a test DataFrame
+    df = pd.DataFrame(data.data,
+                      columns=data.feature_names) # Create a test DataFrame
     df['target'] = data.target
     variables = data.feature_names  # Define the list of variables
     target =   'target' # Define the target variable
@@ -117,15 +110,20 @@ def test_generate_stats_sucess():
 # Test cherry_score function
 def test_cherry_score():
     data = load_breast_cancer()
-    df = pd.DataFrame(data.data, columns=data.feature_names) # Create a test DataFrame
+    df = pd.DataFrame(data.data,
+                      columns=data.feature_names) # Create a test DataFrame
     df['target'] = data.target
     variables = data.feature_names  # Define the list of variables
     target =   'target' # Define the target variable
     result = cherry_score(df, variables, target)
-    assert isinstance(result, pd.DataFrame), 'the outcome is not a dataframe type'
-    assert result.shape[0] == len(variables), 'the num of rows in the outcome is not equal to the num of variables'
-    assert all(col in result.columns for col in ['variable', 'cherry_score']), 'the cols variables and/or cherry_score are not present in the cols of outcome'
-    assert isinstance(cherry_score(df[[variables[0]]+[target]], [variables[0]], target), pd.DataFrame), 'the outcome type when you have only an unique input col is not a dataframe'
+    assert isinstance(result, pd.DataFrame),\
+        'the outcome is not a dataframe type'
+    assert result.shape[0] == len(variables),\
+    'the num of rows in the outcome is not equal to the num of variables'
+    assert all(col in result.columns for col in ['variable', 'cherry_score']),\
+        'the cols variables and/or cherry_score are not present in the cols of outcome'
+    assert isinstance(cherry_score(df[[variables[0]]+[target]], [variables[0]], target), pd.DataFrame),\
+        'the outcome type when you have only an unique input col is not a dataframe'
 
 
 
