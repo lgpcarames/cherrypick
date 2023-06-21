@@ -79,15 +79,16 @@ This approach yields interesting results. We can use the Wisconsin breast cancer
    :alt: competitive_score_winsconsin_dataset
 
 The image above is a snapshot where we selected the top 3 and bottom 3 out of 30 total variables from the Wisconsin breast cancer dataset based on the cherry_score criterion. Alongside the original variables in the dataset, we added a random variable. We can observe that within the universe of 30 variables, the cherry_score successfully distinguished the random variable from the other variables in the set.
+
 Credits
 -------
 Developed by `Lucas Caramês`_.
 
-.. _`Lucas Caramês`_: https://github.com/lgpcarames
+.. _`Lucas Caramês`: https://github.com/lgpcarames
 
 With contributions by `Vinicius Ormenesse`_.
 
-.. _`Vinicius Ormenesse`_: https://github.com/ormenesse
+.. _`Vinicius Ormenesse`: https://github.com/ormenesse
 
 
 This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
