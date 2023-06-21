@@ -3,6 +3,9 @@ name: cherrypick workflow
 
 on: [push, pull_request]
 
+env:
+  CI: False
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
