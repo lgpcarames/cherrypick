@@ -40,7 +40,6 @@ jobs:
           tox
 
       - name: Publish distribution to PyPi
-        if: startWith(github.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
