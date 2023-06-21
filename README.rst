@@ -86,7 +86,7 @@ Developed by `Lucas Caramês`_.
 
 .. _`Lucas Caramês`: https://github.com/lgpcarames
 
-With contributions by `Vinicius Ormenesse`_.
+With code contributions by `Vinicius Ormenesse`_.
 
 .. _`Vinicius Ormenesse`: https://github.com/ormenesse
 
