@@ -1,20 +1,19 @@
 name: cherrypick workflow
 
 
-on: [push, pull_request]
-
-env:
-  CI: False
+on: push
 
 jobs:
-  deploy:
+  build-n-publish:
+    name: Build and Publish CherryPick
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Python 3.9
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.9
+          
       - name: Install dependencies
         run: |
           pip install -r requirements_dev.txt
@@ -22,14 +21,32 @@ jobs:
           pip install tox
           pip install pytest
           
+      - name: Install pypa/build
+        run: >-
+          python3 -m
+          pip install
+          build
+          --user
+      - name: Build a binary wheel and a source tarball
+        run: >-
+          python3 -m
+          build
+          --sdist
+          --wheel
+          --outdir dist/
+          
       - name: Running Tests
         run: |
           tox
 
-      - name: Build and publish
-        env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: |
-          python setup.py sdist bdist_wheel
-          twine upload dist/*
+      - name: Publish distribution to PyPi
+        if: startWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+#         env:
+#           TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+#           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+#         run: |
+#           python setup.py sdist bdist_wheel
+#           twine upload dist/*
