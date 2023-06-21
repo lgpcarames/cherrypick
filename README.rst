@@ -60,20 +60,38 @@ Therefore, in our example, the variable "worst_area" has the highest degree of e
 
 cherry_score
 ============
-O score developed for this library is based on the accuracy rate of each explanatory variable's lines. Furthermore, by analyzing how well each line is classified by all the variables, we can determine the level of difficulty in classifying each line in our dataset. Separating the lines based on difficulty allows us to create two groups: lines that are easily classified and lines that are difficult to classify. Based on the score (or the accuracy rate within each group), we can classify the explanatory variables in relation to each group. This enables us to identify any apparent inconsistency in a variable because we assume that a variable with a high degree of real correlation with the target variable would classify it correctly regardless of the difficulty for other variables. Therefore, important variables would tend to have a high accuracy rate for easier lines and maintain that performance for more difficult lines.
+A score developed exclusively for this library, it is based on the accuracy rate of each explanatory variable’s rows. It helps us understand how well each row in our dataset is classified by different variables, giving us an idea of the classification difficulty. We split the rows into two groups: easy and difficult to classify. By looking at the scores and accuracy rates within each group, we can assess how well the explanatory variables perform for each group. This helps us identify any inconsistencies in a variable's behavior. We assume that highly correlated variables will consistently classify the target variable correctly, regardless of other variables' difficulties. Therefore, important variables should have high accuracy rates for both easy and difficult rows.
 
-However, for random variables, in addition to a low accuracy rate, the probability of correctly or incorrectly classifying a line will solely depend on the class distribution in the target variable. Therefore, if the target variable has a 50/50 distribution of 0s and 1s, the chances of correctly classifying an easy or difficult line would be equal. This causes another effect, which is an inconsistency in the nature of the variable. If a variable exhibits a higher accuracy rate for difficult lines than for easy lines, it would imply that the variable cannot adjust to the simpler points that can be easily classified but can do so for more difficult points. This behavior indicates that the variable most likely has a random relationship with the target, in other words, it has zero correlation.
+.. image:: docs/figs/cherry_score.png
+   :width: 1800px
+   :alt: competitive_score_winsconsin_dataset
+
+However, when dealing with random variables, relying solely on the accuracy rate is not sufficient. The ability to correctly or incorrectly classify a row depends entirely on the class distribution within the target variable. For example, if the target variable has an equal distribution of easy and difficult rows (50/50), random variables tend to have an equal chance of correctly classifying both types of rows. This observation highlights an additional aspect: the inconsistency in the nature of random variables. If a variable shows a higher accuracy rate for difficult rows compared to easy rows, it indicates that the variable struggles to adapt to simpler points that are easily classified but performs better with more challenging points. This behavior suggests that the variable likely has a random relationship with the target variable since the probability of correctly classifying an easy or hard row tends to be the same, indicating zero correlation.
 
 To better understand how this technique works, let's consider a real-world example it was inspired by. In Brazil, there is a national exam called the Exame Nacional do Ensino Médio (ENEM), which determines whether students can enter higher education institutions. Given the national scale of the exam, many precautions were taken in its construction, including how to assign scores to participants. For instance, if the exam were to determine scores based solely on the accuracy rate (i.e., the number of correctly answered questions), a problem could arise. This is because the exam consists mostly of multiple-choice questions, except for the essay section, which allows for some individuals to obtain a reasonable score by simply guessing the answers. As a result, many university spots could be allocated to individuals who were lucky enough to guess a higher number of questions correctly, instead of those who prepared for the exam, thus denying the latter the opportunity to secure a university place. To reduce these chances, a mechanism was created to penalize guessing. Therefore, in addition to selecting the best-performing students, the mechanism also penalizes those who answer randomly.
 
-Although the exact mechanism is not described, I attempt to create an approximation that qualitatively replicates the scoring concept. We can consider the questions in the exam as the variables we intend to study, and the rows in the columns as the questions that participants should answer. In our case, as we are working with binary classification variables, it would be equivalent to an exam with a number of true or false questions per target variable's row.
+Although the exact mechanism is not described, I attempt to create an approximation that qualitatively replicates the scoring concept. We can consider the questions in the exam as the variables we intend to study, and the rows in the columns as the questions that participants should answer. In our case, as we are working with binary classification variables, it would be equivalent to an exam with a number of true or false questions per target variable’s row.
 
-This approach yields interesting results. We can use the Wisconsin breast cancer dataset, which was previously used for competitive scoring, to test the cherry_score, and the results are quite fascinating.
+This approach yields interesting results. We can use the Wisconsin breast cancer dataset, which was previously used for competitive scoring, to test the cherry_score, and the results are quite decent.
 
+.. image:: docs/figs/validation_cherry_score.png
+   :width: 1800px
+   :alt: competitive_score_winsconsin_dataset
+
+The image above is a snapshot where we selected the top 3 and bottom 3 out of 30 total variables from the Wisconsin breast cancer dataset based on the cherry_score criterion. Alongside the original variables in the dataset, we added a random variable. We can observe that within the universe of 30 variables, the cherry_score successfully distinguished the random variable from the other variables in the set.
 Credits
 -------
+Developed by `Lucas Caramês`_.
+
+.. _`Lucas Caramês`_: https://github.com/lgpcarames
+
+With contributions by `Vinicius Ormenesse`_.
+
+.. _`Vinicius Ormenesse`_: https://github.com/ormenesse
+
 
 This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
 
 .. _Cookiecutter: https://github.com/audreyr/cookiecutter
 .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+
