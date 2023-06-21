@@ -19,6 +19,11 @@ jobs:
         run: |
           pip install -r requirements_dev.txt
           pip install setuptools wheel twine
+          pip install tox
+          
+      - name: Running Tests
+        run: |
+          tox
 
       - name: Build and publish
         env:
