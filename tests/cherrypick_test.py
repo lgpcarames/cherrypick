@@ -87,8 +87,8 @@ def test_set_difficulty_group():
     assert result['difficulty_group'].nunique() == 2
 
 
-# Test _generate_stats_sucess_ function
-def test_generate_stats_sucess():
+# Test _generate_stats_success_ function
+def test_generate_stats_success():
     data = load_breast_cancer()
     df = pd.DataFrame(data.data,
                       columns=data.feature_names) # Create a test DataFrame
