@@ -913,23 +913,16 @@ def __set_difficulty_group__(df: pd.DataFrame, target: str) -> pd.DataFrame:
         If the target variable is not binary.
 
     """
-    success_list = []
-    for ind in df.index:
-        try:
-            rate_0 = df.drop(columns=target).T[ind].value_counts()[0] / df.drop(columns=target).T.shape[0]
-        except KeyError:
-            rate_0 = 0
-        try:
-            rate_1 = df.drop(columns=target).T[ind].value_counts()[1] / df.drop(columns=target).T.shape[0]
-        except KeyError:
-            rate_1 = 0
+    
+    rate_0 = (df.drop(columns=target) == 0).sum(axis=1) / df.drop(columns=target).shape[1]
+    rate_1 = (df.drop(columns=target) == 1).sum(axis=1) / df.drop(columns=target).shape[1]
 
-        if df[target].iloc[ind] == 0:
-            success_list.append(rate_0)
-        elif df[target].iloc[ind] == 1:
-            success_list.append(rate_1)
-        else:
-            raise Exception('Target variable must be binary class.')
+    # Using numpy.where to compute success_list based on the target
+    success_list = np.where(df[target] == 0, rate_0, rate_1)
+
+    # Convert the result to a list
+    success_list = success_list.tolist()
+
 
     df['success_rate'] = success_list
 
