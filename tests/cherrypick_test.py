@@ -11,7 +11,7 @@ from cherrypick import (threshold_score,
     __get_features_threshold_score__,
     __best_threshold_classification__,
     __set_difficulty_group__,
-    __generate_stats_sucess__,
+    __generate_stats_success__,
       cherry_score
     )
 
@@ -100,7 +100,7 @@ def test_generate_stats_sucess():
 
     difficulty_df = __set_difficulty_group__(df=classified_df, target=target)
 
-    result = __generate_stats_sucess__(df=difficulty_df, variables=variables, target=target)
+    result = __generate_stats_success__(df=difficulty_df, variables=variables, target=target)
     assert isinstance(result, pd.DataFrame)
     assert result.shape[0] == len(variables)
     assert all(col in result.columns for col in ['variable', 'success_rate_g0', 'success_rate_g1'])
