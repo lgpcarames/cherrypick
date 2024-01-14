@@ -972,7 +972,7 @@ def __generate_stats_success__(
 
     Returns:
     --------
-    __generate_stats_sucess__ : pd.DataFrame
+    __generate_stats_success__ : pd.DataFrame
         Dataframe with the cherry score, along with the statistical metrics used for its calculation.
 
     """
