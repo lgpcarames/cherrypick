@@ -913,23 +913,16 @@ def __set_difficulty_group__(df: pd.DataFrame, target: str) -> pd.DataFrame:
         If the target variable is not binary.
 
     """
-    success_list = []
-    for ind in df.index:
-        try:
-            rate_0 = df.drop(columns=target).T[ind].value_counts()[0] / df.drop(columns=target).T.shape[0]
-        except KeyError:
-            rate_0 = 0
-        try:
-            rate_1 = df.drop(columns=target).T[ind].value_counts()[1] / df.drop(columns=target).T.shape[0]
-        except KeyError:
-            rate_1 = 0
 
-        if df[target].iloc[ind] == 0:
-            success_list.append(rate_0)
-        elif df[target].iloc[ind] == 1:
-            success_list.append(rate_1)
-        else:
-            raise Exception('Target variable must be binary class.')
+    rate_0 = (df.drop(columns=target) == 0).sum(axis=1) / df.drop(columns=target).shape[1]
+    rate_1 = (df.drop(columns=target) == 1).sum(axis=1) / df.drop(columns=target).shape[1]
+
+    # Using numpy.where to compute success_list based on the target
+    success_list = np.where(df[target] == 0, rate_0, rate_1)
+
+    # Convert the result to a list
+    success_list = success_list.tolist()
+
 
     df['success_rate'] = success_list
 
@@ -942,7 +935,7 @@ def __set_difficulty_group__(df: pd.DataFrame, target: str) -> pd.DataFrame:
 
 
 
-def __generate_stats_sucess__(
+def __generate_stats_success__(
                             df: pd.DataFrame,
                             variables: Union[list, np.ndarray],
                             target: str,
@@ -984,32 +977,42 @@ def __generate_stats_sucess__(
 
     """
 
-    df_ = pd.DataFrame({'variable': [], 'success_rate_g0': [], 'success_rate_g1': []})
+    df_ = pd.DataFrame({'variable': variables})
 
-    for var in variables:
-        check_list = pd.DataFrame({'rightClassification': [], 'difficulty_group': []})
-        for ind in df.index:
-            if df[target].iloc[ind] == df[var].iloc[ind]:
-                check_list.loc[len(check_list)] = {'rightClassification': 1, 'difficulty_group': df.iloc[ind]['difficulty_group']}
-            elif df[target].iloc[ind] == 1:
-                check_list.loc[len(check_list)] = {'rightClassification': 0, 'difficulty_group': df.iloc[ind]['difficulty_group']}
-            else:
-                check_list.loc[len(check_list)] = {'rightClassification': np.nan, 'difficulty_group': df.iloc[ind]['difficulty_group']}
+    # Vectorized operation for right classification
+    right_classification = df[variables].eq(df[target], axis=0)
 
-        success_rate_g0 = check_list.loc[check_list['difficulty_group'] == 0, 'rightClassification'].sort_values().value_counts()[1] / check_list[check_list['difficulty_group'] == 0].shape[0]
-        success_rate_g1 = check_list.loc[check_list['difficulty_group'] == 1, 'rightClassification'].sort_values().value_counts()[1] / check_list[check_list['difficulty_group'] == 1].shape[0]
+    # Add difficulty group information
+    right_classification['difficulty_group'] = df['difficulty_group']
 
-        df_.loc[len(df_)] = {'variable': var, 'success_rate_g0': success_rate_g0, 'success_rate_g1': success_rate_g1}
+    # Compute success rates for each variable in each difficulty group
+    success_rate_g0 = right_classification.groupby('difficulty_group').mean().loc[0]
+    success_rate_g1 = right_classification.groupby('difficulty_group').mean().loc[1]
 
-    df_['g0_quantile'] = df_['success_rate_g0'].apply(lambda x: 'Q1' if x <= df_['success_rate_g0'].quantile(0.33) else ('Q2' if x <= df_['success_rate_g0'].quantile(0.66) else 'Q3'))
-    df_['g1_quantile'] = df_['success_rate_g1'].apply(lambda x: 'Q1' if x <= df_['success_rate_g1'].quantile(0.33) else ('Q2' if x <= df_['success_rate_g1'].quantile(0.66) else 'Q3'))
+    # Add success rates to the dataframe
+    df_['success_rate_g0'] = success_rate_g0[variables].values
+    df_['success_rate_g1'] = success_rate_g1[variables].values
 
-    df_['g0_quantile_score'] = df_['g0_quantile'].apply(lambda x: g0_weight[2] if x == 'Q3' else (g0_weight[1] if x == 'Q2' else g0_weight[0]))
-    df_['g1_quantile_score'] = df_['g1_quantile'].apply(lambda x: g1_weight[2] if x == 'Q3' else (g1_weight[1] if x == 'Q2' else g1_weight[0]))
+    # Compute quantiles for each group
+    quantile_g0 = df_['success_rate_g0'].quantile([0.33, 0.66])
+    quantile_g1 = df_['success_rate_g1'].quantile([0.33, 0.66])
 
+    # Assign quantile categories
+    df_['g0_quantile'] = pd.cut(df_['success_rate_g0'], bins=[-float('inf'), quantile_g0[0.33], quantile_g0[0.66], float('inf')], labels=['Q1', 'Q2', 'Q3'])
+    df_['g1_quantile'] = pd.cut(df_['success_rate_g1'], bins=[-float('inf'), quantile_g1[0.33], quantile_g1[0.66], float('inf')], labels=['Q1', 'Q2', 'Q3'])
+
+    # Mapping weights to quantiles
+    df_['g0_quantile_score'] = df_['g0_quantile'].map({'Q1': g0_weight[0], 'Q2': g0_weight[1], 'Q3': g0_weight[2]}).astype(float)
+    df_['g1_quantile_score'] = df_['g1_quantile'].map({'Q1': g1_weight[0], 'Q2': g1_weight[1], 'Q3': g1_weight[2]}).astype(float)
+
+    # Compute cherry score
     df_ = df_.assign(cherry_score=lambda x: (x['g0_quantile_score'] * x['success_rate_g0'] + x['g1_quantile_score'] * x['success_rate_g1']) / 2)
 
-    return df_.sort_values(by='cherry_score', ascending=False)
+    # Sort the DataFrame
+    df_ = df_.sort_values(by='cherry_score', ascending=False)
+
+
+    return df_
 
 
 
@@ -1058,7 +1061,7 @@ def cherry_score(df: pd.DataFrame, variables: Union[list, np.ndarray], target: s
     # Creating a column with difficulty group
     df_difficulty = __set_difficulty_group__(df=classified_df, target=target)
 
-    df_score = __generate_stats_sucess__(df=df_difficulty, variables=variables, target=target)
+    df_score = __generate_stats_success__(df=df_difficulty, variables=variables, target=target)
 
     if only_score:
         return df_score[['variable', 'cherry_score']]
