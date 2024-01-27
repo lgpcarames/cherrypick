@@ -84,7 +84,7 @@ def test_set_difficulty_group():
     assert isinstance(result, pd.DataFrame)
     assert 'success_rate' in result.columns
     assert 'difficulty_group' in result.columns
-    assert result['difficulty_group'].nunique() == 2
+    assert result['difficulty_group'].nunique() == 3
 
 
 # Test _generate_stats_success_ function
