@@ -888,6 +888,8 @@ def __best_threshold_classification__(df: pd.DataFrame, variables: Union[list, n
     return df_temp
 
 
+
+
 def __set_difficulty_group__(df: pd.DataFrame, target: str) -> pd.DataFrame:
     """
     Define the difficulty groups for classifying the rows based on the accuracy rate of the explanatory variables.
@@ -926,12 +928,27 @@ def __set_difficulty_group__(df: pd.DataFrame, target: str) -> pd.DataFrame:
 
     df['success_rate'] = success_list
 
-    difficulty_threshold = df['success_rate'].mean()
+    # difficulty_threshold = df['success_rate'].mean()
+
+    # # Set the difficulty group: 0 for easy lines, 1 for difficult lines
+    # df['difficulty_group'] = df['success_rate'].apply(lambda x: 0 if x >= difficulty_threshold else 1)
+
+    
+    difficulty_threshold_g1 = df['success_rate'].quantile(0.333)
+
+    difficulty_threshold_g2 = df['success_rate'].quantile(0.666)
 
     # Set the difficulty group: 0 for easy lines, 1 for difficult lines
-    df['difficulty_group'] = df['success_rate'].apply(lambda x: 0 if x >= difficulty_threshold else 1)
+    df['difficulty_group'] = df['success_rate'].apply(
+                        lambda x: 0 if x <= difficulty_threshold_g1 else (1 if x <= difficulty_threshold_g2 else 2)
+                        )
+
+    # df['difficulty_group'] = df['success_rate'].apply(lambda x: 0 if x >= difficulty_threshold else 1)
 
     return df
+
+
+
 
 
 
@@ -940,7 +957,8 @@ def __generate_stats_success__(
                             variables: Union[list, np.ndarray],
                             target: str,
                             g0_weight=[0.1, 0.3, 1.0],
-                            g1_weight=[0.25, 0.5, 1.0]
+                            g1_weight=[0.25, 0.5, 1.0],
+                            g2_weight=[0.35, 0.65, 1.0]
                             ) -> pd.DataFrame:
     """
     Generate the cherry score along with the statistics used to calculate it.
@@ -959,17 +977,22 @@ def __generate_stats_success__(
         Name of the target variable.
 
     g0_weight : list
-        Weight given according to the hit rate of a variable in the group of easiest lines.
+        Weight given according to the success rate of a variable in the group of easiest lines.
         The weight is associated with the quartile that the variable assumes in the group.
         The lower the quartile, the fewer number of hits the variable had in the group,
         therefore, the weight will be lower.
 
     g1_weight : list
-        Weight given according to the hit rate of a variable in the group of the most difficult lines.
+        Weight given according to the success rate of a variable in the group of the lines
+        with intermediate difficulty. The weight is associated with the quartile that the
+        variable assumes in the group. The lower the quartile, the fewer number of hits the
+        variable had in the group, therefore, the weight will be lower.
+
+    g2_weight : list
+        Weight given according to the success rate of a variable in the group of the most difficult lines.
         The weight is associated with the quartile that the variable assumes in the group.
         The lower the quartile, the fewer number of hits the variable had in the group,
         therefore, the weight will be lower.
-
     Returns:
     --------
     __generate_stats_success__ : pd.DataFrame
@@ -985,34 +1008,46 @@ def __generate_stats_success__(
     # Add difficulty group information
     right_classification['difficulty_group'] = df['difficulty_group']
 
+    # print(right_classification)
+    # print(right_classification.groupby('difficulty_group').mean())
+
     # Compute success rates for each variable in each difficulty group
     success_rate_g0 = right_classification.groupby('difficulty_group').mean().loc[0]
     success_rate_g1 = right_classification.groupby('difficulty_group').mean().loc[1]
+    success_rate_g2 = right_classification.groupby('difficulty_group').mean().loc[2]
 
     # Add success rates to the dataframe
     df_['success_rate_g0'] = success_rate_g0[variables].values
     df_['success_rate_g1'] = success_rate_g1[variables].values
+    df_['success_rate_g2'] = success_rate_g2[variables].values
 
     # Compute quantiles for each group
     quantile_g0 = df_['success_rate_g0'].quantile([0.33, 0.66])
     quantile_g1 = df_['success_rate_g1'].quantile([0.33, 0.66])
+    quantile_g2 = df_['success_rate_g2'].quantile([0.33, 0.66])
 
     # Assign quantile categories
     df_['g0_quantile'] = pd.cut(df_['success_rate_g0'], bins=[-float('inf'), quantile_g0[0.33], quantile_g0[0.66], float('inf')], labels=['Q1', 'Q2', 'Q3'])
     df_['g1_quantile'] = pd.cut(df_['success_rate_g1'], bins=[-float('inf'), quantile_g1[0.33], quantile_g1[0.66], float('inf')], labels=['Q1', 'Q2', 'Q3'])
+    df_['g2_quantile'] = pd.cut(df_['success_rate_g2'], bins=[-float('inf'), quantile_g2[0.33], quantile_g2[0.66], float('inf')], labels=['Q1', 'Q2', 'Q3'])
 
     # Mapping weights to quantiles
     df_['g0_quantile_score'] = df_['g0_quantile'].map({'Q1': g0_weight[0], 'Q2': g0_weight[1], 'Q3': g0_weight[2]}).astype(float)
     df_['g1_quantile_score'] = df_['g1_quantile'].map({'Q1': g1_weight[0], 'Q2': g1_weight[1], 'Q3': g1_weight[2]}).astype(float)
+    df_['g2_quantile_score'] = df_['g2_quantile'].map({'Q1': g2_weight[0], 'Q2': g2_weight[1], 'Q3': g2_weight[2]}).astype(float)
 
     # Compute cherry score
-    df_ = df_.assign(cherry_score=lambda x: (x['g0_quantile_score'] * x['success_rate_g0'] + x['g1_quantile_score'] * x['success_rate_g1']) / 2)
+    df_ = df_.assign(cherry_score=lambda x: (
+                                            x['g0_quantile_score'] * x['success_rate_g0'] +\
+                                                  x['g1_quantile_score'] * x['success_rate_g1'] +
+                                                  x['g2_quantile_score']*x['success_rate_g2']) / 3)
 
     # Sort the DataFrame
     df_ = df_.sort_values(by='cherry_score', ascending=False)
 
 
     return df_
+
 
 
 
