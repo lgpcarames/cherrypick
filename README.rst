@@ -26,6 +26,12 @@ Some tools to help the process of feature selection
 * Free software: MIT license
 * Documentation: https://cherrypick.readthedocs.io. (work in progress!)
 
+How to Use?
+----------
+You can install the library by using the command
+
+**- pip install cherrypick**
+
 
 Features
 --------
