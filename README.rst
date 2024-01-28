@@ -91,7 +91,7 @@ In this manner, the library's approach maintains consistency with these foundati
    :width: 1800px
    :alt: competitive_score_winsconsin_dataset
 
-The image above is a snapshot where we selected the top 3 and bottom 3 out of 30 total variables from the Wisconsin breast cancer dataset based on the cherry_score criterion. Alongside the original variables in the dataset, we added a random variable. We can observe that within the universe of 30 variables, the cherry_score successfully distinguished the random variable from the other variables in the set.
+The image presented above captures a snapshot in which the first three and last three variables from the total of 30 variables in the Wisconsin breast cancer dataset were selected based on the cherry_score criteria. Accompanying the original dataset variables, a random variable was introduced. Within this set of 30 variables, it becomes evident that cherry_score effectively distinguishes the random variable from the rest. At the top of the list, we find the same variables as identified in the competitive scoring process, albeit with alternating positions.
 
 I really hope that the features presented can be useful to you. Enjoy!
 
