@@ -26,59 +26,81 @@ Some tools to help the process of feature selection
 * Free software: MIT license
 * Documentation: https://cherrypick.readthedocs.io. (work in progress!)
 
+How to Use?
+----------
+You can install the library by using the command
+
+**- pip install cherrypick**
+
 
 Features
 --------
 
-* CherryPick: utilizes the competitive scoring technique, offering a comprehensive pipeline that incorporates multiple techniques to measure feature importance. It provides a ranked list of the most important variables, sorted based on their calculated scores.
+* CherryPick: This feature utilizes competitive scoring techniques, offering a comprehensive pipeline that incorporates multiple methods to measure feature importance. It provides a ranked list of the most crucial variables, sorted based on their calculated scores.
 
 
-* cherry_score: unique score developed exclusively for this library.  It assesses the importance of a variable by evaluating its ability to classify a row based on the performance of other variables.
+* cherry_score: A unique scoring metric developed exclusively for this library. It evaluates the importance of a variable by assessing its ability to classify data rows based on the performance of other variables.
 
 
 How it Works?
 -------------
-In this section we give a more descriptible detail about the function of each tool developed in this library.
+In this section, we provide a detailed description of each tool's functionality within this library.
 
 Competitive Score
 =================
 
-This technique involves evaluating and ranking t        he performance of each explanatory variable in relation to the dependent variable. After all the evaluation processes, the results are combined to provide an overall understanding from multiple independent evaluation processes. The term "competitive" arises from the fact that the process resembles a competition among the explanatory variables, with the one that generally outperformed the others throughout each evaluation being the winner.
+This technique involves evaluating and ranking the performance of each explanatory variable concerning the dependent variable. After conducting multiple independent evaluation processes, the results are combined to provide an overall understanding. It's called "competitive" because it resembles a competition among explanatory variables, with the top performer winning.
 
-The model allows for the use of a standard pipeline with various metrics and classifiers that can immediately be applied to the scoring process. Alternatively, one can create a custom pipeline by simply fitting the dataframe, where one column represents the explanatory variables and the remaining columns correspond to each evaluation process.
+The model supports a standard pipeline with various metrics and classifiers that can be applied to the scoring process. Alternatively, you can create a custom pipeline by fitting the dataframe, where one column represents explanatory variables, and the remaining columns correspond to each evaluation process.
 
-Using the breast cancer Wisconsin dataset as an example, we can obtain the following example dataframe:
+Using the example of the Breast Cancer Wisconsin dataset, we obtain the following dataframe:
 
 .. image:: docs/figs/competitive_score.png
    :width: 1800px
    :alt: competitive_score_winsconsin_dataset
 
 
-In the table above, we present the entire process of constructing the competitive scoring. The first column displays the explanatory variables, positioned according to their final score shown in the last column. The intermediate columns represent the evaluation stages and the performance value of each variable in that stage. The closer the explanatory variable's row is to the top, the higher the degree of explainability it has with the target variable.
+In the table above, we present the entire process of constructing the competitive scoring. The first column displays the explanatory variables, sorted by their final scores in the last column. The intermediate columns represent the evaluation stages and the performance of each variable in those stages. Variables closer to the top have a higher degree of explainability with the target variable.
 
-Therefore, in our example, the variable "worst_area" has the highest degree of explainability in relation to the target variable among all the variables analyzed. On the other hand, within this sample, "worst_radius" would be the worst.
+For example, in this sample, "worst_area" has the highest degree of explainability with target variable, while "worst_radius" performs less well.
 
 cherry_score
 ============
-A score developed exclusively for this library, it is based on the accuracy rate of each explanatory variable’s rows. It helps us understand how well each row in our dataset is classified by different variables, giving us an idea of the classification difficulty. We split the rows into two groups: easy and difficult to classify. By looking at the scores and accuracy rates within each group, we can assess how well the explanatory variables perform for each group. This helps us identify any inconsistencies in a variable's behavior. We assume that highly correlated variables will consistently classify the target variable correctly, regardless of other variables' difficulties. Therefore, important variables should have high accuracy rates for both easy and difficult rows.
+This score, developed exclusively for this library, is based on the accuracy rate of each explanatory variable's rows. It helps assess how well each row in the dataset is classified by different variables, revealing classification difficulty. Rows are split into two groups: easy and difficult to classify. By examining scores and accuracy rates in each group, we can evaluate variable performance. Important variables should have high accuracy rates for both easy and difficult rows.
 
 .. image:: docs/figs/cherry_score.png
    :width: 1800px
    :alt: competitive_score_winsconsin_dataset
 
-However, when dealing with random variables, relying solely on the accuracy rate is not sufficient. The ability to correctly or incorrectly classify a row depends entirely on the class distribution within the target variable. For example, if the target variable has an equal distribution of easy and difficult rows (50/50), random variables tend to have an equal chance of correctly classifying both types of rows. This observation highlights an additional aspect: the inconsistency in the nature of random variables. If a variable shows a higher accuracy rate for difficult rows compared to easy rows, it indicates that the variable struggles to adapt to simpler points that are easily classified but performs better with more challenging points. This behavior suggests that the variable likely has a random relationship with the target variable since the probability of correctly classifying an easy or hard row tends to be the same, indicating zero correlation.
+However, when dealing with random variables, relying solely on accuracy rates is insufficient. The ability to classify a row correctly or incorrectly depends largely on the class distribution within the target variable. For example, if the target variable has an equal distribution of easy and challenging cases (50/50), random variables tend to have an equal chance of correctly classifying both types of cases. This observation highlights an additional aspect: the inconsistency inherent in the nature of random variables.
 
-To better understand how this technique works, let's consider a real-world example it was inspired by. In Brazil, there is a national exam called the Exame Nacional do Ensino Médio (ENEM), which determines whether students can enter higher education institutions. Given the national scale of the exam, many precautions were taken in its construction, including how to assign scores to participants. For instance, if the exam were to determine scores based solely on the accuracy rate (i.e., the number of correctly answered questions), a problem could arise. This is because the exam consists mostly of multiple-choice questions, except for the essay section, which allows for some individuals to obtain a reasonable score by simply guessing the answers. As a result, many university spots could be allocated to individuals who were lucky enough to guess a higher number of questions correctly, instead of those who prepared for the exam, thus denying the latter the opportunity to secure a university place. To reduce these chances, a mechanism was created to penalize guessing. Therefore, in addition to selecting the best-performing students, the mechanism also penalizes those who answer randomly.
+Conversely, in scenarios where a variable exhibits a high correlation with the target, it may achieve a high rate of correct classification for both easy and challenging cases. This situation occurs when the variable reliably predicts outcomes across the entire spectrum of complexity, demonstrating its significant association with the target variable.
 
-Although the exact mechanism is not described, I attempt to create an approximation that qualitatively replicates the scoring concept. We can consider the questions in the exam as the variables we intend to study, and the rows in the columns as the questions that participants should answer. In our case, as we are working with binary classification variables, it would be equivalent to an exam with a number of true or false questions per target variable’s row.
+However, when a variable shows a higher accuracy rate for challenging cases compared to easy ones, it suggests that the variable struggles to differentiate simpler cases that are readily classified. Instead, it performs better with more complex cases. This behavior indicates a potential random relationship between the variable and the target variable, as the likelihood of correctly classifying both easy and difficult cases tends to be the same, suggesting no significant correlation
 
-This approach yields interesting results. We can use the Wisconsin breast cancer dataset, which was previously used for competitive scoring, to test the cherry_score, and the results are quite decent.
+To gain a better understanding of how this technique operates, let's delve into a real-world example that served as its inspiration. In Brazil, a nationwide examination known as the Exame Nacional do Ensino Médio (ENEM) plays a pivotal role in determining students' eligibility for admission to higher education institutions. Given the vast scope of this examination, meticulous measures were taken in its design, particularly concerning the scoring system.
+
+Consider this scenario: If the exam were to assign scores solely based on the accuracy rate (i.e., the number of correctly answered questions), a significant issue would emerge. This challenge arises because the majority of the exam comprises multiple-choice questions, with the exception of an essay section. This format allows some individuals to potentially achieve respectable scores by simply making educated guesses. Consequently, there is a risk that university placements could be allocated to individuals who happened to guess a higher number of questions correctly, rather than to those who earnestly prepared for the exam. Such an outcome would deny deserving candidates the opportunity to secure a place at a university.
+
+To mitigate this risk, a mechanism was introduced to discourage random guessing. Therefore, in addition to recognizing and rewarding high-performing students, this mechanism also imposes penalties on those who answer questions randomly.
+
+
+While the precise mechanism remains undisclosed, we strive to develop an approximation that qualitatively reproduces the underlying scoring concept. Examining the analogy, we can envision the exam questions as the variables under study, and the rows within the columns as the questions participants must address. In the context of the ENEM, participants select from five alternatives, with only one being correct. Within our library, where we primarily address binary classification scenarios, it aligns with participants having the choice between just two alternatives.
+
+Within this framework, the concept of easy and difficult questions plays a crucial role. If a participant correctly answers more difficult questions than easy ones, it implies a likelihood of guessing on the difficult ones, impacting the final score. In essence, individuals with the same number of correct answers may receive different scores. This assumption arises from the premise that correctly answering the most challenging questions necessitates a strong foundational knowledge, which should manifest as a relatively high success rate on easier questions. Failure to exhibit this knowledge suggests a probable reliance on guesswork.
+
+This same logic applies to the cherry_score metric. If a variable excels at correctly classifying the most challenging cases while struggling with the seemingly "obvious" ones, it likely reflects random fluctuations (guessing) rather than a genuine correlation between the variable and the target (indicating knowledge).
+
+In this manner, the library's approach maintains consistency with these foundational principles. We can use the Wisconsin breast cancer dataset, which was previously used for competitive scoring, to test the cherry_score, and the results are quite decent.
 
 .. image:: docs/figs/validation_cherry_score.png
    :width: 1800px
    :alt: competitive_score_winsconsin_dataset
 
-The image above is a snapshot where we selected the top 3 and bottom 3 out of 30 total variables from the Wisconsin breast cancer dataset based on the cherry_score criterion. Alongside the original variables in the dataset, we added a random variable. We can observe that within the universe of 30 variables, the cherry_score successfully distinguished the random variable from the other variables in the set.
+The image presented above captures a snapshot in which the first three and last three variables from the total of 30 variables in the Wisconsin breast cancer dataset were selected based on the cherry_score criteria. Accompanying the original dataset variables, a random variable was introduced. Within this set of 30 variables, it becomes evident that cherry_score effectively distinguishes the random variable from the rest. At the top of the list, we find the same variables as identified in the competitive scoring process, albeit with alternating positions.
+
+I really hope that the features presented can be useful to you. Enjoy!
+
 
 Credits
 -------
