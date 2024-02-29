@@ -279,13 +279,14 @@ class CherryPick:
         verbosity=False,
         baseline=True
     ):
+        self.data = data.copy()
+
         self.variables = self.__set_variables(variables, baseline)
         if isinstance(target, str):
             self.target = target.replace(' ', '_')
         else:
             raise TypeError('Please check the type of the variable. It must be a string.')
         
-        self.data = data.copy()
 
 
         self.study_cross_val = study_cross_val
