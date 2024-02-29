@@ -15,7 +15,7 @@ import warnings
 from sklearn.model_selection import StratifiedKFold
 from functools import reduce
 from typing import Union, Any, List
-
+from collections.abc import Iterable
 
 from sklearn.metrics import roc_auc_score, roc_curve, confusion_matrix
 from sklearn.linear_model import LogisticRegression
@@ -232,22 +232,22 @@ class CherryPick:
     run_tree(data, variables, target):
         Run Decision Tree model for feature importance.
 
-    data_shap_score():
+    _data_shap_score():
         Classify feature importance according to SHAP scores.
 
-    data_lgbm_gain():
+    _data_lgbm_gain():
         Classify feature importance according to gain of entropy in a LightGBM model.
 
-    data_lgbm_split():
+    _data_lgbm_split():
         Classify feature importance according to split of entropy in a LightGBM model.
 
-    data_logistic_roc():
+    _data_logistic_roc():
         Classify feature importance according to the ROC of a logistic model.
 
-    data_mutual_info():
+    _data_mutual_info():
         Classify feature importance according to mutual information.
 
-    data_tree_gain():
+    _data_tree_gain():
         Classify feature importance according to gain of entropy in a Decision Tree model.
 
     get_feature_importances(logistic_roc=True, mutual_info=True, shap_score=True,
@@ -285,11 +285,8 @@ class CherryPick:
         else:
             raise TypeError('Please check the type of the variable. It must be a string.')
         
-        self.data = data
+        self.data = data.copy()
 
-        # Inserting a column with a random variable for comparison
-        if 'random_variable' not in self.data.columns.tolist():
-            self.data['random_variable'] = np.random.random(size=len(self.data))
 
         self.study_cross_val = study_cross_val
         self.num_studies = num_studies
@@ -306,7 +303,7 @@ class CherryPick:
         self.data_log_tree = None
 
         # Output data
-        self.data_most_important = None
+        self.data_most_important = pd.DataFrame()
 
         # Loading models
         self.lgbModel = None
@@ -325,15 +322,19 @@ class CherryPick:
         temp_var = var.copy()
         if baseline:
             temp_var = np.append(temp_var, 'random_variable')
+            
+            # Inserting a column with a random variable for comparison
+            if 'random_variable' not in self.data.columns.tolist():
+                self.data['random_variable'] = np.random.random(size=len(self.data))
         
-        if isinstance(temp_var, list) or isinstance(temp_var, np.ndarray):
+        if isinstance(temp_var, Iterable):
             temp_var = [x.replace(' ', '_') for x in temp_var]
         elif isinstance(temp_var, str):
             temp_var = temp_var.replace(' ', '_')
         else:
-            raise TypeError('Please check the type of the variable. It must be either a string or a list.')
+            raise TypeError('Please check the type of the variable. It must be either a string or a iterable.')
         return temp_var
-    def mutual_info(self, data: pd.DataFrame, explicable_vars: Union[str, list], target: str) -> list:
+    def _mutual_info(self, data: pd.DataFrame, explicable_vars: Union[str, list], target: str) -> list:
         """
         Function to calculate the mutual info between the explicable and target variables.
 
@@ -351,7 +352,7 @@ class CherryPick:
 
         return mutual_info_classif(df_.drop(columns=[target]), df_[target], random_state=13)
 
-    def logistic_roc(self, data: pd.DataFrame, explicable_vars: Union[str, list], target: str) -> float:
+    def _logistic_roc(self, data: pd.DataFrame, explicable_vars: Union[str, list], target: str) -> float:
         """
         Function to obtain the ROC of a logistic regression model trained
         on a specified set of variables.
@@ -385,7 +386,7 @@ class CherryPick:
         except Exception as e:
             print(e)
             return -1
-    def run_tree(self, dataframe: pd.DataFrame, colunas: list, alvo: str) -> DecisionTreeClassifier:
+    def _run_tree(self, dataframe: pd.DataFrame, colunas: list, alvo: str) -> DecisionTreeClassifier:
         """
         Runs the decision tree model with the best hyperparameters found through Optuna.
 
@@ -480,7 +481,7 @@ class CherryPick:
 
 
 
-    def gera_shap_score(self, dataframe: pd.DataFrame, colunas: Union[str, list], alvo: str) -> List:
+    def _gera_shap_score(self, dataframe: pd.DataFrame, colunas: Union[str, list], alvo: str) -> List:
         """
         Generates SHAP scores and feature importance using LightGBM model.
 
@@ -505,9 +506,10 @@ class CherryPick:
             light_model = self._run_lgbm(dataframe, colunas, alvo)
 
             explainer = shap.Explainer(light_model, dataframe[colunas])
+
             shap_values = explainer(dataframe[colunas])
 
-            arr_order = shap_values.abs.mean(0).argsort().flip().values
+            arr_order = shap_values.abs.mean(0).argsort.flip.values
 
             optuna.logging.set_verbosity(optuna.logging.DEBUG)
 
@@ -519,9 +521,10 @@ class CherryPick:
             self._run_lgbm(dataframe, colunas, alvo)
 
         explainer = shap.Explainer(self.lgbModel, dataframe[colunas])
-        shap_values = explainer(dataframe[colunas])
 
-        arr_order = shap_values.abs.mean(0).argsort().flip().values
+        shap_values = explainer(dataframe[colunas])
+        
+        arr_order = shap_values.abs.mean(0).argsort.flip.values
 
         optuna.logging.set_verbosity(optuna.logging.DEBUG)
 
@@ -530,18 +533,18 @@ class CherryPick:
         return [shap_df, shap_values]
 
 
-    def data_shap_score(self) -> pd.DataFrame:
+    def _data_shap_score(self) -> pd.DataFrame:
         """
         Classify the feature importance according to the SHAP score metric.
         """
         metric = 'shap_score_' + self.target
         print(f'\n--- STARTING SHAP SCORING FOR TARGET: {self.target}---\n')
-        aux = self.gera_shap_score(self.data, self.variables, self.target)[0]
+        aux = self._gera_shap_score(self.data, self.variables, self.target)[0]
         aux = aux.rename(columns={'shap_score': metric})
         print(f'\n--- FINISHED SHAP SCORING FOR TARGET: {self.target}---\n')
         return aux
 
-    def data_lgbm_gain(self) -> pd.DataFrame:
+    def _data_lgbm_gain(self) -> pd.DataFrame:
         """
         Classify the feature importance according to the gain of entropy in a boost model.
         """
@@ -552,7 +555,7 @@ class CherryPick:
         print(f'\n--- FINISHED BOOST GAIN SCORING FOR TARGET: {self.target}---\n')
         return pd.DataFrame(list(zip(self.lgbModel.feature_name_, self.lgbModel.booster_.feature_importance(importance_type='gain'))), columns=['variable', metric]).sort_values(by=metric, ascending=False)
 
-    def data_lgbm_split(self) -> pd.DataFrame:
+    def _data_lgbm_split(self) -> pd.DataFrame:
         """
         Classify the feature importance according to the split of entropy in a boost model.
         """
@@ -563,7 +566,7 @@ class CherryPick:
         print(f'\n--- FINISHED BOOST SPLIT SCORING FOR TARGET: {self.target}---\n')
         return pd.DataFrame(list(zip(self.lgbModel.feature_name_, self.lgbModel.booster_.feature_importance(importance_type='split'))), columns=['variable', metric]).sort_values(by=metric, ascending=False)
 
-    def data_logistic_roc(self) -> pd.DataFrame:
+    def _data_logistic_roc(self) -> pd.DataFrame:
         """
         Classify the feature importance according to the ROC of a logistic model.
         """
@@ -575,11 +578,11 @@ class CherryPick:
         }
         for variable in tqdm(self.variables, desc='logistic-roc metric'):
             dic_['variable'].append(variable)
-            dic_[metric].append(self.logistic_roc(self.data, variable, self.target))
+            dic_[metric].append(self._logistic_roc(self.data, variable, self.target))
         print(f'\n--- FINISHED LOGISTIC ROC SCORING FOR TARGET: {self.target}---\n')
         return pd.DataFrame(dic_).sort_values(by=metric, ascending=False)
 
-    def data_mutual_info(self) -> pd.DataFrame:
+    def _data_mutual_info(self) -> pd.DataFrame:
         """
         Classify the feature importance according to the mutual information.
         """
@@ -591,21 +594,27 @@ class CherryPick:
         }
         for variable in tqdm(self.variables, desc='mutual information metric'):
             dic_['variable'].append(variable)
-            dic_[metric].append(self.mutual_info(self.data, variable, self.target)[0])
+            dic_[metric].append(self._mutual_info(self.data, variable, self.target)[0])
         print(f'\n--- FINISHED MUTUAL INFORMATION SCORING FOR TARGET: {self.target}---\n')
         return pd.DataFrame(dic_).sort_values(by=metric, ascending=False)
 
-    def data_tree_gain(self) -> pd.DataFrame:
+    def _data_tree_gain(self) -> pd.DataFrame:
         print(f'\n--- STARTING DECISION TREE GAIN SCORING FOR TARGET: {self.target}---\n')
         if not self.treeModel:
-            self.run_tree(self.data, self.variables, self.target)
+            self._run_tree(self.data, self.variables, self.target)
         metric = 'decisionTree_gain_' + self.target
         print(f'\n--- FINISHED DECISION TREE GAIN SCORING FOR TARGET: {self.target}---\n')
         return pd.DataFrame(list(zip(self.treeModel.feature_names_in_, self.treeModel.feature_importances_)), columns=['variable', metric]).sort_values(by=metric, ascending=False)
 
 
-    def get_feature_importances(self, logistic_roc=True, mutual_info=True, shap_score=True,
-                                tree_gain=True, boost_gain=True, boost_split=True, cache=True):
+    def get_feature_importances(self,
+                                logistic_roc=True,
+                                mutual_info=True,
+                                shap_score=True,
+                                tree_gain=True,
+                                boost_gain=True,
+                                boost_split=True,
+                                cache=True):
         """
         Generate a table compiling the results of each metric for feature importance.
 
@@ -637,44 +646,44 @@ class CherryPick:
         pd.DataFrame
             A dataframe containing the compiled feature importances.
         """
-        if cache and self.data_most_important is not None:
+        if cache and not self.data_most_important.empty:
             return self.data_most_important
 
         temp_ = []
 
         if logistic_roc:
             try:
-                temp_.append(self.data_logistic_roc())
+                temp_.append(self._data_logistic_roc())
             except Exception as e:
                 print(e)
 
         if mutual_info:
             try:
-                temp_.append(self.data_mutual_info())
+                temp_.append(self._data_mutual_info())
             except Exception as e:
                 print(e)
 
         if tree_gain:
             try:
-                temp_.append(self.data_tree_gain())
+                temp_.append(self._data_tree_gain())
             except Exception as e:
                 print(e)
 
         if shap_score:
             try:
-                temp_.append(self.data_shap_score())
+                temp_.append(self._data_shap_score())
             except Exception as e:
                 print(e)
 
         if boost_gain:
             try:
-                temp_.append(self.data_lgbm_gain())
+                temp_.append(self._data_lgbm_gain())
             except Exception as e:
                 print(e)
 
         if boost_split:
             try:
-                temp_.append(self.data_lgbm_split())
+                temp_.append(self._data_lgbm_split())
             except Exception as e:
                 print(e)
 
@@ -689,7 +698,7 @@ class CherryPick:
         """
         Calculate the standard score for ranking metrics.
         """
-        df_ = df.sort_values(by=metrics_column[0], ascending=False)
+        df_ = df.sort_values(by=metrics_column, ascending=False)
         df_['standard_score'] = range(len(df)-1, -1, -1)
 
         for metric in metrics_column[1:]:
@@ -707,11 +716,11 @@ class CherryPick:
         """
         Calculate the cluster score for ranking metrics.
         """
-        df_ = df.sort_values(by=metrics_column[0], ascending=False)
+        df_ = df.sort_values(by=metrics_column, ascending=False)
 
         df_scaled = df_.copy()
 
-        for col in metrics_column[1:]:
+        for col in metrics_column:
             scaler = MinMaxScaler()
             df_scaled[col] = scaler.fit_transform(df_[[col]])
 
@@ -722,14 +731,22 @@ class CherryPick:
                         verbose=verbose,
                         random_state=random_state,
                         )
-        cluster.fit(df_scaled[metrics_column[1:]])
+        cluster.fit(df_scaled[metrics_column])
 
-        df_['clusters'] = cluster.predict(df_scaled[metrics_column[1:]])
-        df_['cluster_score'] = df_scaled[metrics_column[1:]].mean(axis=1)
+        df_['clusters'] = cluster.predict(df_scaled[metrics_column])
+        df_['cluster_score'] = df_scaled[metrics_column].mean(axis=1)
 
         return df_.sort_values(by='cluster_score', ascending=False)
 
-    def competitive_score(self, df: pd.DataFrame, metrics_column: list, strategy='standard'):
+    def competitive_score(self,
+                        logistic_roc=True,
+                        mutual_info=True,
+                        shap_score=True,
+                        tree_gain=True,
+                        boost_gain=True,
+                        boost_split=True,
+                        strategy='standard'
+                        ):
         """
         Given the dataframe, and the columns with the metrics. Calculates the score by ranking the metrics.
         The first column of the dataframe must be the variables column. All others must be numeric.
@@ -739,10 +756,6 @@ class CherryPick:
         df: pd.DataFrame
             Dataframe containing the metrics.
 
-
-        metrics_column: list
-            List of columns containing the metrics.
-
         strategy: str, optional (default: 'standard')
             The scoring strategy to use. Can be 'standard' or 'cluster'.
 
@@ -751,10 +764,23 @@ class CherryPick:
         pd.DataFrame
             Dataframe sorted by the calculated score.
         """
+        if self.data_most_important.empty:
+           dataframe = self.get_feature_importances(
+                            logistic_roc=logistic_roc,
+                            mutual_info=mutual_info,
+                            shap_score=shap_score,
+                            tree_gain=tree_gain,
+                            boost_gain=boost_gain,
+                            boost_split=boost_split
+                            ) 
+        else:
+            dataframe = self.data_most_important.copy()
+        
+        metrics_column = dataframe.drop(columns='variable', errors='ignore').columns.tolist()
         if strategy == 'standard':
-            return self.__standard_score__(df=df, metrics_column=metrics_column)
+            return self.__standard_score__(df=dataframe, metrics_column=metrics_column)
         elif strategy == 'cluster':
-            return self.__cluster_score__(df=df, metrics_column=metrics_column)
+            return self.__cluster_score__(df=dataframe, metrics_column=metrics_column)
 
 
 
@@ -877,7 +903,7 @@ def __best_threshold_classification__(df: pd.DataFrame, variables: Union[list, n
         temp_list_geq_thres = df_temp[variable].apply(lambda x: 1 if x >= temp_thres else 0)
         score_geq_thres = roc_auc_score(df_temp[target], temp_list_geq_thres)
 
-        temp_list_leq_thres = df_temp[variable].apply(lambda x: 1 if x <= temp_thres else 0)
+        temp_list_leq_thres = df_temp[variable].apply(lambda x: 1 if x < temp_thres else 0)
         score_leq_thres = roc_auc_score(df_temp[target], temp_list_leq_thres)
 
         if score_geq_thres >= score_leq_thres:
