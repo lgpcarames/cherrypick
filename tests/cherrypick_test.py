@@ -28,14 +28,14 @@ def get_data():
     target =   'target' # Define the target variable
     return df, variables, target
 
-def test_CherryPick_initialization(data):
-    data, variables, target = data
+def test_CherryPick_initialization():
+    data, variables, target = get_data()
     cherry_pick = CherryPick(data, variables, target)
     assert cherry_pick.target == target, "Target variable was not set correctly"
     assert 'random_variable' in cherry_pick.variables, "Baseline variable not added correctly"
 
-def test_competitive_score_simple(test_data, mocker):
-    data, variables, target = test_data
+def test_competitive_score_simple(mocker):
+    data, variables, target = get_data()
     cherry_pick = CherryPick(data, variables, target, log_lr_study=False, log_lgb_study=False, log_tree_study=False)
     
     # Mock the return value of the feature importance calculation methods to simplify testing
