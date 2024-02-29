@@ -12,11 +12,38 @@ from cherrypick import (threshold_score,
     __best_threshold_classification__,
     __set_difficulty_group__,
     __generate_stats_success__,
-      cherry_score
+      cherry_score,
+      CherryPick
     )
 
 data = load_breast_cancer()
 
+def get_data():
+    data = load_breast_cancer()
+    df = pd.DataFrame(data.data,
+                      columns=data.feature_names) # Create a test DataFrame
+    df['target'] = data.target
+    variables = data.feature_names  # Define the list of variables
+    target =   'target' # Define the target variable
+    return df, variables, target
+
+def test_CherryPick_initialization():
+    data, variables, target = get_data()
+    cherry_pick = CherryPick(data, variables, target)
+    assert cherry_pick.target == target, "Target variable was not set correctly"
+    assert 'random_variable' in cherry_pick.variables, "Baseline variable not added correctly"
+
+def test_competitive_score_simple():
+    data, variables, target = get_data()
+    cherry_pick = CherryPick(data, variables, target, log_lr_study=False, log_lgb_study=False, log_tree_study=False)
+     
+    # Assume logistic_roc and mutual_info are True, others are False
+    result = cherry_pick.competitive_score(logistic_roc=True, mutual_info=True, shap_score=False, tree_gain=False, boost_gain=False, boost_split=False, strategy='standard')
+    
+    # Check if result is a DataFrame and has expected columns
+    assert isinstance(result, pd.DataFrame), "Result should be a DataFrame"
+    assert 'logistic_roc_target' in result.columns, "Result should include logistic roc scores"
+    assert 'mutual_info_target' in result.columns, "Result should include mutual info scores"
 
 
 # Test threshold_score function

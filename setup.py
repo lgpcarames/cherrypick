@@ -11,21 +11,26 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'pip==21.1',
-    'bump2version==0.5.11',
-    'wheel==0.38.1',
-    'watchdog==0.9.0',
-    'tox==3.14.0',
-    'coverage==4.5.4',
-    'Sphinx==1.8.5',
-    'twine==1.14.0',
-    'pandas==1.5.3',
-    'scikit-learn==1.2.1',
-    'numpy==1.23.5',
-    'matplotlib==3.7.0',
-    'optuna==3.1.1',
-    'lightgbm==3.3.5',
-    'tqdm==4.64.1'
+    "pip>=21.1",
+    "bump2version>=0.5.11",
+    "wheel>=0.38.1",
+    "watchdog>=0.9.0",
+    "flake8>=3.7.8",
+    "tox>=3.14.0",
+    "coverage>=4.5.4",
+    "Sphinx>=1.8.5",
+    "twine>=1.14.0",
+    "pandas>=1.5.3",
+    "scikit-learn>=1.2.1",
+    "numpy>=1.23.5",
+    "matplotlib>=3.7.0",
+    "optuna>=3.1.1",
+    "lightgbm>=3.3.5",
+    "tqdm>=4.64.1",
+    "shap>=0.41.0",
+
+
+
  ]
 
 test_requirements = [ ]
@@ -55,6 +60,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/lgpcarames/cherrypick',
-    version='0.2.1',
+    version='0.2.2',
     zip_safe=False,
 )
