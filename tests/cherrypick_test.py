@@ -18,7 +18,6 @@ from cherrypick import (threshold_score,
 
 data = load_breast_cancer()
 
-@pytest.fixture
 def get_data():
     data = load_breast_cancer()
     df = pd.DataFrame(data.data,
@@ -34,14 +33,10 @@ def test_CherryPick_initialization():
     assert cherry_pick.target == target, "Target variable was not set correctly"
     assert 'random_variable' in cherry_pick.variables, "Baseline variable not added correctly"
 
-def test_competitive_score_simple(mocker):
+def test_competitive_score_simple():
     data, variables, target = get_data()
     cherry_pick = CherryPick(data, variables, target, log_lr_study=False, log_lgb_study=False, log_tree_study=False)
-    
-    # Mock the return value of the feature importance calculation methods to simplify testing
-    mocker.patch.object(cherry_pick, '_data_logistic_roc', return_value=pd.DataFrame({'variable': variables, 'logistic_roc_target': [0.5, 0.6]}))
-    mocker.patch.object(cherry_pick, '_data_mutual_info', return_value=pd.DataFrame({'variable': variables, 'mutual_info_target': [0.1, 0.2]}))
-    
+     
     # Assume logistic_roc and mutual_info are True, others are False
     result = cherry_pick.competitive_score(logistic_roc=True, mutual_info=True, shap_score=False, tree_gain=False, boost_gain=False, boost_split=False, strategy='standard')
     
